@@ -11,6 +11,31 @@ const NODES = [
   { id: 'hospital', number: '05', name: '医療機関', sub: '地域の医療', x: 8.1, z: -2.6, height: 3.0 },
   { id: 'retail', number: '06', name: '販売店', sub: '暮らしへの影響', x: 1.2, z: -8.1, height: 2.5 },
 ];
+const PEOPLE = {
+  vendor: { shirt: '#9f8bd5', skin: '#e7b996', hair: '#3b2b39', style: 'curly', role: '委託先エンジニア', x: 2.35, z: 1.8 },
+  hq: { shirt: '#74a8df', skin: '#cc977b', hair: '#252939', style: 'bob', role: '業務担当', x: -1.65, z: 1.25 },
+  factory: { shirt: '#e2a65d', skin: '#d8aa84', hair: '#443535', style: 'helmet', role: '工場スタッフ', x: -1.65, z: 1.15 },
+  logistics: { shirt: '#63b7ba', skin: '#a8755a', hair: '#292a37', style: 'cap', role: '配送スタッフ', x: 1.65, z: 1.2 },
+  hospital: { shirt: '#dc929b', skin: '#e8bda4', hair: '#47383b', style: 'bun', role: '医療スタッフ', x: 1.65, z: 1.1 },
+  retail: { shirt: '#9bcfc1', skin: '#c38b6e', hair: '#343140', style: 'pony', role: 'お店のスタッフ', x: -1.55, z: 1.2 },
+};
+
+function portraitSVG(id, mood = 'calm') {
+  const p = PEOPLE[id] || PEOPLE.vendor;
+  const hat = p.style === 'helmet' ? '<path d="M17 25a15 15 0 0 1 30 0v3H17Z" fill="#edb965"/><path d="M14 28h36M32 12v14" stroke="#f8d99b" stroke-width="3"/>' : p.style === 'cap' ? '<path d="M17 24a15 15 0 0 1 30 0v4H17Z" fill="#75a4d6"/><path d="M29 27h22" stroke="#99c3ec" stroke-width="4"/>' : '';
+  const glasses = id === 'vendor' ? '<g fill="none" stroke="#313342" stroke-width="1.5"><rect x="21" y="27" width="9" height="7" rx="2"/><rect x="34" y="27" width="9" height="7" rx="2"/><path d="M30 30h4"/></g>' : '';
+  const mouth = mood === 'alert' ? '<ellipse cx="32" cy="37" rx="2.5" ry="3.2" fill="#67403d"/>' : `<path d="M27 36q5 ${mood === 'relief' ? '7' : '4'} 10 0" fill="none" stroke="#67403d" stroke-width="1.6" stroke-linecap="round"/>`;
+  const hairExtra = p.style === 'bun' || p.style === 'pony' ? `<circle cx="44" cy="18" r="7" fill="${p.hair}"/>` : '';
+  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#e8dfd2"/>${hairExtra}<path d="M11 64v-8q1-14 21-14t21 14v8" fill="${p.shirt}"/><path d="M28 40h8v10h-8" fill="${p.skin}"/><path d="M17 34V24q0-14 15-14t15 14v15l-6 6H23Z" fill="${p.hair}"/><ellipse cx="32" cy="29" rx="13" ry="16" fill="${p.skin}"/><path d="M19 28v-6q0-13 13-12 15-1 14 15-10-2-14-9-1 8-13 12" fill="${p.hair}"/>${hat}<g fill="#313342"><circle cx="26" cy="30" r="1.4"/><circle cx="38" cy="30" r="1.4"/></g>${glasses}${mouth}<path d="M24 49l8 6 8-6" fill="none" stroke="#ffffff80" stroke-width="2"/></svg>`;
+}
+
+function overlapArea(a, b, padding = 0) {
+  return Math.max(0, Math.min(a.x + a.w + padding, b.x + b.w + padding) - Math.max(a.x - padding, b.x - padding)) * Math.max(0, Math.min(a.y + a.h + padding, b.y + b.h + padding) - Math.max(a.y - padding, b.y - padding));
+}
+function fitDialoguePosition(position, width, height, w, h) {
+  const mx = Math.min(10, Math.max(0, width - w) / 2), my = Math.min(10, Math.max(0, height - h) / 2);
+  return { x: Math.max(mx, Math.min(width - w - mx, position.x)), y: Math.max(my, Math.min(height - h - my, position.y)) };
+}
 
 function asSet(value, defaults = []) {
   if (value instanceof Set) return value;
@@ -62,17 +87,90 @@ function installStyle() {
     .supply-city-fallback button:first-child{border-color:#9384d7;color:#c5baff;background:#211b33}
     .supply-city-fallback button[data-status=impacted]{color:#ffb06b;border-color:#ffb06b66}
     .supply-city-fallback button[data-status=incident]{color:#ff6b77;border-color:#ff6b7780}
-    @media(max-width:650px){.supply-city-label{min-width:87px;padding:6px 3px 6px 0;gap:5px}.supply-city-label strong{font-size:9px}.supply-city-label small{font-size:7px;margin-top:4px}.supply-city-label[data-node=vendor] strong{font-size:10px}.supply-city-number{width:19px;height:21px;font-size:8px}.supply-city-fallback{gap:15px;grid-template-columns:repeat(2,minmax(95px,150px))}}
+    .supply-dialogue-layer{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+    .supply-dialogue-line{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+    .supply-dialogue-line path{fill:none;stroke:#e7b276;stroke-width:1.2;stroke-dasharray:3 4;opacity:.75}
+    .supply-dialogue-line circle{fill:#f5c58e;stroke:#172335;stroke-width:2}
+    .supply-dialogue{position:absolute;top:0;left:0;box-sizing:border-box;width:246px;max-width:calc(100% - 20px);padding:11px 13px 12px;border:1px solid #e2cfaf;border-radius:14px 14px 14px 4px;background:linear-gradient(135deg,#fffcf4,#eee9df);color:#263448;box-shadow:0 7px 26px #0006,0 1px 0 #ffffff90 inset;font-family:inherit;line-height:1.4;isolation:isolate}
+    .supply-dialogue[hidden],.supply-dialogue-line[hidden]{display:none!important}
+    .supply-dialogue[data-mood=alert]{border-color:#edb16f;background:linear-gradient(135deg,#fff9ed,#f2e5d5)}
+    .supply-dialogue[data-mood=relief]{border-color:#92c5b3;background:linear-gradient(135deg,#f7fff9,#e3ece4)}
+    .supply-dialogue-badge{display:block;font:600 8px/1.2 ui-monospace,SFMono-Regular,monospace;letter-spacing:.1em;color:#81715d;margin-bottom:7px}
+    .supply-dialogue-person{display:flex;align-items:center;gap:9px}
+    .supply-dialogue-portrait{display:block;width:36px;height:36px;flex:0 0 36px;overflow:hidden;border-radius:10px;background:#e8dfd2;box-shadow:0 0 0 1px #24314112}
+    .supply-dialogue-portrait svg{display:block;width:100%;height:100%}
+    .supply-dialogue-name{display:block;font-size:11px;font-weight:750;letter-spacing:.025em;color:#253247}
+    .supply-dialogue-role{display:block;margin-top:2px;font-size:9px;color:#7d7c7a}
+    .supply-dialogue-text{margin:9px 0 0;font-size:13px;font-weight:550;line-height:1.65;letter-spacing:.015em;overflow-wrap:anywhere}
+    .supply-dialogue-live{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+    .supply-fallback-portrait{display:block;width:34px;height:34px;margin:0 auto 7px;border-radius:9px;overflow:hidden}
+    .supply-fallback-portrait svg{display:block;width:100%;height:100%}
+    @media(max-width:650px){.supply-city-label{min-width:87px;padding:6px 3px 6px 0;gap:5px}.supply-city-label strong{font-size:9px}.supply-city-label small{font-size:7px;margin-top:4px}.supply-city-label[data-node=vendor] strong{font-size:10px}.supply-city-number{width:19px;height:21px;font-size:8px}.supply-city-fallback{gap:15px;grid-template-columns:repeat(2,minmax(95px,150px))}.supply-dialogue{width:236px;padding:9px 11px 10px}.supply-dialogue-badge{font-size:7px;margin-bottom:5px}.supply-dialogue-text{font-size:12px;line-height:1.6;margin-top:7px}.supply-dialogue-portrait{width:31px;height:31px;flex-basis:31px}.supply-dialogue-name{font-size:10px}.supply-dialogue-role{font-size:8px}}
   `;
+}
+
+// This one overlay is shared by WebGL and fallback. Only update() changes the
+// live-region text; projecting and animating its leader never announces again.
+function createDialogueOverlay(container) {
+  const root = document.createElement('div'); root.className = 'supply-dialogue-layer';
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('class', 'supply-dialogue-line'); svg.setAttribute('aria-hidden', 'true'); svg.style.display = 'none';
+  const path = document.createElementNS(svg.namespaceURI, 'path'), dot = document.createElementNS(svg.namespaceURI, 'circle'); dot.setAttribute('r', '3.5'); svg.append(path, dot); root.appendChild(svg);
+  const bubble = document.createElement('section'); bubble.className = 'supply-dialogue'; bubble.hidden = true; bubble.setAttribute('role', 'note'); bubble.setAttribute('aria-label', '演習内の会話');
+  bubble.innerHTML = '<span class="supply-dialogue-badge">演習内の会話</span><div class="supply-dialogue-person"><span class="supply-dialogue-portrait" aria-hidden="true"></span><span><strong class="supply-dialogue-name"></strong><span class="supply-dialogue-role"></span></span></div><p class="supply-dialogue-text"></p>';
+  root.appendChild(bubble);
+  const live = document.createElement('div'); live.className = 'supply-dialogue-live'; live.setAttribute('role', 'status'); live.setAttribute('aria-live', 'polite'); live.setAttribute('aria-atomic', 'true'); root.appendChild(live); container.appendChild(root);
+  let dialogue = null, signature = '', previousPosition = null, previousViewport = '';
+  return {
+    get active() { return dialogue; },
+    update(value) {
+      const node = value && NODES.find(n => n.id === value.nodeId);
+      const next = node && String(value.text || '').trim() ? { nodeId: node.id, name: String(value.name || '担当者').slice(0, 32), role: String(value.role || PEOPLE[node.id].role).slice(0, 50), text: String(value.text).slice(0, 350), mood: ['alert', 'relief'].includes(value.mood) ? value.mood : 'calm', stamp: String(value.stamp ?? '') } : null;
+      const key = JSON.stringify(next); if (signature === key) return false; signature = key; dialogue = next; previousPosition = null;
+      bubble.hidden = !next; svg.style.display = next ? '' : 'none';
+      if (!next) { live.textContent = ''; return true; }
+      bubble.dataset.mood = next.mood; bubble.querySelector('.supply-dialogue-portrait').innerHTML = portraitSVG(next.nodeId, next.mood);
+      bubble.querySelector('.supply-dialogue-name').textContent = next.name; bubble.querySelector('.supply-dialogue-role').textContent = next.role; bubble.querySelector('.supply-dialogue-text').textContent = next.text;
+      live.textContent = `${next.name}、${next.role}。${next.text}（演習内の会話）`;
+      return true;
+    },
+    layout({ width, height, anchor, obstacles = [], core = null }) {
+      if (!dialogue) return null;
+      const w = bubble.offsetWidth || Math.min(246, width - 20), h = bubble.offsetHeight || 134, margin = 10;
+      const viewport = `${width}:${height}:${w}:${h}`;
+      if (viewport !== previousViewport) { previousPosition = null; previousViewport = viewport; }
+      const left = margin, right = Math.max(margin, width - w - margin), top = margin, bottom = Math.max(margin, height - h - margin);
+      const fit = p => fitDialoguePosition(p, width, height, w, h);
+      const candidates = [{ x: left, y: top }, { x: right, y: top }, { x: left, y: bottom }, { x: right, y: bottom }, { x: (width - w) / 2, y: top }, { x: (width - w) / 2, y: bottom }].map(fit);
+      const score = p => { const rect = { ...p, w, h }; return (core ? overlapArea(rect, core, 10) * 30 : 0) + obstacles.reduce((sum, o) => sum + overlapArea(rect, o, 7) * 2, 0) + Math.hypot(p.x + w / 2 - anchor.x, p.y + h / 2 - anchor.y) * .3; };
+      let position = candidates.reduce((best, p) => score(p) < score(best) ? p : best);
+      if (previousPosition && score(fit(previousPosition)) <= score(position) + 150) position = fit(previousPosition);
+      position = fit(position);
+      previousPosition = position; bubble.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
+      const endX = Math.max(position.x + 16, Math.min(position.x + w - 16, anchor.x));
+      const endY = anchor.y > position.y + h / 2 ? position.y + h : position.y;
+      path.setAttribute('d', `M${anchor.x.toFixed(1)} ${anchor.y.toFixed(1)} Q${endX.toFixed(1)} ${anchor.y.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}`);
+      dot.setAttribute('cx', anchor.x); dot.setAttribute('cy', anchor.y);
+      return { ...position, w, h };
+    },
+    dispose() { root.remove(); },
+  };
 }
 function fallback(container, onSelect) {
   container.dataset.renderer = 'fallback';
+  if (getComputedStyle(container).position === 'static') container.style.position = 'relative';
   const root = document.createElement('div'); root.className = 'supply-city-fallback'; root.setAttribute('aria-label', 'PHPランタイムと業務依存関係');
-  const buttons = NODES.map(node => { const b = document.createElement('button'); b.type = 'button'; b.textContent = `${node.number}　${node.name}`; b.onclick = () => onSelect?.(node.id); root.appendChild(b); return [node.id, b]; });
+  const buttons = NODES.map(node => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `<span class="supply-fallback-portrait" aria-hidden="true">${portraitSVG(node.id)}</span><span class="supply-fallback-name">${node.number}　${node.name}</span>`; b.onclick = () => onSelect?.(node.id); root.appendChild(b); return [node.id, b]; });
   container.appendChild(root);
+  const dialogue = createDialogueOverlay(container); let currentState = { dialogue: null };
+  function layout() {
+    if (!dialogue.active) return; const bounds = container.getBoundingClientRect(), target = buttons.find(([id]) => id === dialogue.active.nodeId)?.[1].getBoundingClientRect();
+    const obstacles = buttons.map(([, button]) => { const r = button.getBoundingClientRect(); return { x: r.left - bounds.left, y: r.top - bounds.top, w: r.width, h: r.height }; });
+    dialogue.layout({ width: container.clientWidth, height: container.clientHeight, anchor: { x: target ? target.left - bounds.left + target.width / 2 : bounds.width / 2, y: target ? target.top - bounds.top + 20 : bounds.height / 2 }, obstacles });
+  }
+  const observer = new ResizeObserver(layout); observer.observe(container);
   return {
-    update(state) { buttons.forEach(([id, b]) => { b.dataset.status = nodeStatus(id, state); b.setAttribute('aria-pressed', String(state.selected === id)); if (id === 'vendor') b.textContent = state.futureMode ? '共通ソフトウェア基盤 · 継続的な更新' : `委託先のPHP基盤 · ${asSet(state.patched, ['vendor']).has('vendor') ? '8.3.36 / 更新確認済み' : '8.3.35 / 未修正'}`; }); },
-    focus(id) { buttons.find(([key]) => key === id)?.[1].focus(); }, reset() {}, zoom() {}, setRotate() {}, dispose() { root.remove(); },
+    update(next) { currentState = { ...currentState, ...next }; const state = currentState; buttons.forEach(([id, b]) => { b.dataset.status = nodeStatus(id, state); b.setAttribute('aria-pressed', String(state.selected === id)); if (id === 'vendor') b.querySelector('.supply-fallback-name').textContent = state.futureMode ? '共通ソフトウェア基盤 · 継続的な更新' : `委託先のPHP基盤 · ${asSet(state.patched, ['vendor']).has('vendor') ? '8.3.36 / 更新確認済み' : '8.3.35 / 未修正'}`; }); dialogue.update(state.dialogue); layout(); },
+    focus(id) { buttons.find(([key]) => key === id)?.[1].focus(); }, reset() {}, zoom() {}, setRotate() {}, dispose() { observer.disconnect(); dialogue.dispose(); root.remove(); },
   };
 }
 
@@ -110,8 +208,8 @@ export function createScene(container, { onSelect } = {}) {
   const glass = new THREE.MeshPhysicalMaterial({ color: '#8670ca', metalness: .15, roughness: .12, transparent: true, opacity: .23, side: THREE.DoubleSide, depthWrite: false });
   const unitBox = new THREE.BoxGeometry(1, 1, 1);
   const world = new THREE.Group(); scene.add(world);
-  const structures = new Map(), pickable = [], routes = [], particles = [], spinners = [], pulses = [];
-  let state = { day: 0, visibility: 'observed', impacted: [], patched: false, prevented: false, isolated: false, selected: null, layer: 'all', futureMode: false, pressure: 0 };
+  const structures = new Map(), people = new Map(), pickable = [], routes = [], particles = [], spinners = [], pulses = [];
+  let state = { day: 0, visibility: 'observed', impacted: [], patched: false, prevented: false, isolated: false, selected: null, layer: 'all', futureMode: false, pressure: 0, dialogue: null };
   let disposed = false, frame = 0, elapsed = 0, lastTime = null, focusTarget = null, desiredZoom = null, needsLabelLayout = true;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const basic = (color, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, toneMapped: false, depthWrite: opacity === 1 });
@@ -158,6 +256,59 @@ export function createScene(container, { onSelect } = {}) {
     ctx.shadowBlur = 0; ctx.fillStyle = '#beb0ee'; ctx.font = '500 29px ui-monospace, SFMono-Regular, Menlo, sans-serif'; ctx.fillText(futureMode ? '継続的な更新' : `${version} / ${patched ? '更新確認済み' : '未修正'}`, 384, 300); phpTexture.needsUpdate = true;
   }
   paintPHP(false);
+
+  const personSphere = new THREE.SphereGeometry(1, 14, 10);
+  function makePerson(node, parent) {
+    const p = PEOPLE[node.id], rig = new THREE.Group(); rig.position.set(p.x, -.42, p.z); rig.scale.setScalar(1.08); parent.add(rig);
+    const cloth = new THREE.MeshStandardMaterial({ color: p.shirt, roughness: .75, emissive: p.shirt, emissiveIntensity: .12 });
+    const skin = new THREE.MeshStandardMaterial({ color: p.skin, roughness: .87, emissive: p.skin, emissiveIntensity: .12 });
+    const hair = new THREE.MeshStandardMaterial({ color: p.hair, roughness: .8 }), ink = basic('#222639'), trousers = new THREE.MeshStandardMaterial({ color: '#3b4c66', roughness: .8 });
+    function ball(group, x, y, z, sx, sy, sz, material) { const o = new THREE.Mesh(personSphere, material); o.position.set(x, y, z); o.scale.set(sx, sy, sz); group.add(o); return o; }
+    ring(rig, .46, .017, .025, basic(p.shirt, .55));
+    [-.14, .14].forEach(x => { const leg = new THREE.Mesh(new THREE.CapsuleGeometry(.095, .35, 3, 8), trousers); leg.position.set(x, .34, 0); rig.add(leg); box(rig, x, .075, .065, .19, .12, .33, ink); });
+    const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.245, .37, 4, 12), cloth); torso.position.y = 1.02; torso.scale.z = .8; rig.add(torso);
+    box(rig, 0, .61, 0, .39, .13, .29, trousers); ball(rig, 0, 1.43, 0, .12, .15, .12, skin);
+    const head = new THREE.Group(); head.position.y = 1.69; rig.add(head);
+    ball(head, 0, 0, 0, .31, .34, .29, skin); ball(head, -.31, -.02, 0, .055, .09, .05, skin); ball(head, .31, -.02, 0, .055, .09, .05, skin);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(.329, 14, 10, 0, Math.PI * 2, 0, 1.69), hair); cap.position.y = .035; head.add(cap);
+    if (p.style === 'curly') for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; ball(head, Math.cos(a) * .21, .27 + (i % 2) * .02, Math.sin(a) * .17, .13, .12, .13, hair); }
+    if (p.style === 'bob') { ball(head, -.27, -.04, -.04, .095, .25, .19, hair); ball(head, .27, -.04, -.04, .095, .25, .19, hair); }
+    if (p.style === 'bun' || p.style === 'pony') ball(head, .02, p.style === 'bun' ? .21 : -.04, -.31, .16, p.style === 'bun' ? .16 : .28, .14, hair);
+    if (p.style === 'helmet' || p.style === 'cap') {
+      const hatMaterial = new THREE.MeshStandardMaterial({ color: p.style === 'helmet' ? '#f0be70' : '#72a3d9', roughness: .6, emissive: p.style === 'helmet' ? '#ad7238' : '#214968', emissiveIntensity: .12 });
+      const hat = new THREE.Mesh(new THREE.SphereGeometry(.353, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), hatMaterial); hat.position.y = .1; head.add(hat);
+      if (p.style === 'helmet') { ring(head, .36, .034, .1, hatMaterial); box(head, 0, .34, 0, .06, .12, .55, hatMaterial); }
+      else box(head, 0, .105, .19, .54, .045, .4, hatMaterial);
+    }
+    [-.105, .105].forEach(x => ball(head, x, .015, .269, .023, .027, .018, ink));
+    const brows = [-.105, .105].map(x => box(head, x, .089, .275, .078, .019, .014, hair));
+    ball(head, 0, -.055, .29, .036, .043, .035, skin);
+    const mouth = new THREE.Group(); mouth.position.set(0, -.13, .283); head.add(mouth);
+    const smile = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.061, .01, 0), new THREE.Vector3(0, -.019, .012), new THREE.Vector3(.061, .01, 0)]), new THREE.LineBasicMaterial({ color: '#694142', toneMapped: false })); mouth.add(smile);
+    const surprise = new THREE.Mesh(new THREE.TorusGeometry(.034, .013, 6, 12), basic('#694142')); surprise.visible = false; mouth.add(surprise);
+    if (node.id === 'vendor') { [-.107, .107].forEach(x => { const lens = new THREE.Mesh(new THREE.TorusGeometry(.069, .012, 5, 12), ink); lens.position.set(x, .015, .292); lens.scale.y = .77; head.add(lens); }); box(head, 0, .02, .297, .08, .012, .015, ink); }
+    function arm(side) {
+      const pivot = new THREE.Group(); pivot.position.set(side * .28, 1.27, 0); rig.add(pivot);
+      const sleeve = new THREE.Mesh(new THREE.CapsuleGeometry(.095, .22, 3, 8), cloth); sleeve.position.y = -.15; pivot.add(sleeve);
+      ball(pivot, 0, -.37, .02, .086, .12, .085, skin); pivot.rotation.x = -.22; return pivot;
+    }
+    const leftArm = arm(-1), rightArm = arm(1);
+    if (node.id === 'vendor' || node.id === 'hq') {
+      const tablet = box(rig, 0, .96, .32, .48, .32, .055, ink); tablet.rotation.x = -.15;
+      box(rig, 0, .97, .355, .38, .22, .012, basic(node.id === 'vendor' ? '#b7a9ef' : '#9bced1'));
+    } else if (node.id === 'logistics') {
+      const parcel = box(rig, 0, .88, .34, .43, .38, .32, new THREE.MeshStandardMaterial({ color: '#d4ad7c', roughness: .9 }));
+      box(parcel, 0, 0, .51, .12, 1.02, .02, basic('#f0d8b5')); rightArm.rotation.x = -.6;
+    } else if (node.id === 'hospital') {
+      box(rig, -.15, 1.08, .18, .1, .53, .07, basic('#eff4e5')); box(rig, .15, 1.08, .18, .1, .53, .07, basic('#eff4e5'));
+      const scope = new THREE.Mesh(new THREE.TorusGeometry(.13, .018, 5, 16, Math.PI * 1.6), ink); scope.position.set(0, 1.15, .22); scope.rotation.z = -.6; rig.add(scope);
+      ball(rig, .1, 1.01, .23, .045, .045, .018, basic('#d9e3dd'));
+    } else if (node.id === 'retail') box(rig, 0, .94, .22, .36, .52, .035, new THREE.MeshStandardMaterial({ color: '#547e6f', roughness: .8 }));
+    const marker = new THREE.Group(); marker.position.y = 2.24; rig.add(marker); marker.visible = false;
+    const markerMaterial = basic(COLORS.amber); box(marker, 0, .09, 0, .055, .21, .055, markerMaterial); ball(marker, 0, -.075, 0, .035, .035, .035, markerMaterial);
+    const pick = new THREE.Mesh(new THREE.CylinderGeometry(.5, .5, 2.2, 10), new THREE.MeshBasicMaterial({ visible: false })); pick.position.y = 1.05; pick.userData.nodeId = node.id; rig.add(pick); pickable.push(pick);
+    people.set(node.id, { rig, head, leftArm, rightArm, brows, smile, surprise, marker, baseY: rig.position.y, phase: NODES.indexOf(node) * 1.17, mood: 'calm', active: false });
+  }
 
   for (const node of NODES) {
     const group = new THREE.Group(); group.position.set(node.x, 0, node.z); world.add(group);
@@ -227,6 +378,7 @@ export function createScene(container, { onSelect } = {}) {
       ring(exchange, .68, .06, 0, lighterMetal, [.55, 0, 0]); ring(exchange, .68, .027, 0, accent, [.55, 0, 0]);
       const dot = new THREE.Mesh(new THREE.OctahedronGeometry(.22), accent); dot.position.set(.67, 0, 0); exchange.add(dot); spinners.push({ object: exchange, axis: 'y', speed: .12 });
     }
+    makePerson(node, group);
     structures.set(node.id, { node, group, accent, statusRing, baseGlow, statusPulse, status: 'normal' });
   }
 
@@ -262,21 +414,53 @@ export function createScene(container, { onSelect } = {}) {
     const leader = document.createElementNS('http://www.w3.org/2000/svg', 'line'); svg.appendChild(leader);
     return { node, button, leader, anchor: new THREE.Vector3(node.x, node.height + .5, node.z), x: 0, y: 0 };
   });
+  const dialogueOverlay = createDialogueOverlay(container);
   const projected = new THREE.Vector3(); let width = 1, height = 1;
   function layoutLabels() {
+    world.updateMatrixWorld(true); camera.updateMatrixWorld();
     labels.forEach(label => {
       projected.copy(label.anchor).project(camera); label.w = label.button.offsetWidth || 120; label.h = label.button.offsetHeight || 42;
       label.px = (projected.x + 1) * width / 2; label.py = (1 - projected.y) * height / 2;
       label.x = Math.max(7, Math.min(width - label.w - 7, label.px - label.w / 2));
       label.y = Math.max(8, Math.min(height - label.h - 8, label.py - label.h));
     });
-    for (let pass = 0; pass < 8; pass++) for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
-      const a = labels[i], b = labels[j];
-      const ox = Math.min(a.x + a.w + 7, b.x + b.w + 7) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h + 8, b.y + b.h + 8) - Math.max(a.y, b.y);
-      if (ox > 0 && oy > 0) {
-        const shift = oy / 2 + 1; if (a.y <= b.y) { a.y -= shift; b.y += shift; } else { a.y += shift; b.y -= shift; }
-        a.y = Math.max(7, Math.min(height - a.h - 7, a.y)); b.y = Math.max(7, Math.min(height - b.h - 7, b.y));
+    let bubbleBounds = null, coreBounds = null;
+    if (dialogueOverlay.active) {
+      const person = people.get(dialogueOverlay.active.nodeId);
+      projected.set(0, 2.12, 0); person.rig.localToWorld(projected); projected.project(camera);
+      const anchor = { x: (projected.x + 1) * width / 2, y: (1 - projected.y) * height / 2 };
+      projected.set(0, 2, 0).project(camera); const unit = height / (camera.top - camera.bottom) * camera.zoom;
+      coreBounds = { x: (projected.x + 1) * width / 2 - 1.9 * unit, y: (1 - projected.y) * height / 2 - 2.1 * unit, w: 3.8 * unit, h: 4.2 * unit };
+      bubbleBounds = dialogueOverlay.layout({ width, height, anchor, obstacles: labels, core: coreBounds });
+    }
+    function avoid(label, obstacle) {
+      if (!obstacle || !overlapArea(label, obstacle, 5)) return;
+      const choices = [{ x: label.x, y: obstacle.y - label.h - 9 }, { x: label.x, y: obstacle.y + obstacle.h + 9 }, { x: obstacle.x - label.w - 9, y: label.y }, { x: obstacle.x + obstacle.w + 9, y: label.y }].filter(p => p.x >= 7 && p.y >= 7 && p.x + label.w <= width - 7 && p.y + label.h <= height - 7);
+      if (choices.length) { const best = choices.reduce((a, b) => Math.hypot(a.x - label.x, a.y - label.y) < Math.hypot(b.x - label.x, b.y - label.y) ? a : b); label.x = best.x; label.y = best.y; }
+    }
+    for (let pass = 0; pass < 14; pass++) {
+      labels.forEach(label => { avoid(label, bubbleBounds); avoid(label, coreBounds); });
+      for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
+        const a = labels[i], b = labels[j];
+        const ox = Math.min(a.x + a.w + 7, b.x + b.w + 7) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h + 8, b.y + b.h + 8) - Math.max(a.y, b.y);
+        if (ox > 0 && oy > 0) {
+          const shift = oy / 2 + 1; if (a.y <= b.y) { a.y -= shift; b.y += shift; } else { a.y += shift; b.y -= shift; }
+          a.y = Math.max(7, Math.min(height - a.h - 7, a.y)); b.y = Math.max(7, Math.min(height - b.h - 7, b.y));
+        }
       }
+    }
+    // Final packing reserves the bubble and PHP core first. Unlike pairwise
+    // relaxation, placing each label once cannot push a later one into speech.
+    if (bubbleBounds) {
+      const occupied = [bubbleBounds, coreBounds].filter(Boolean);
+      const priority = label => label.node.id === 'vendor' ? 0 : label.node.id === dialogueOverlay.active.nodeId ? 1 : 2;
+      [...labels].sort((a, b) => priority(a) - priority(b) || a.py - b.py).forEach(label => {
+        const desired = { x: Math.max(7, Math.min(width - label.w - 7, label.px - label.w / 2)), y: Math.max(7, Math.min(height - label.h - 7, label.py - label.h)) };
+        const candidates = [{ x: label.x, y: label.y }, desired];
+        for (const x of [7, (width - label.w) / 2, width - label.w - 7, desired.x]) for (let y = 7; y <= height - label.h - 7; y += label.h + 9) candidates.push({ x, y });
+        const score = p => occupied.reduce((sum, obstacle) => sum + overlapArea({ ...p, w: label.w, h: label.h }, obstacle, 5) * 1000, 0) + (p.x - desired.x) ** 2 + (p.y - desired.y) ** 2;
+        const best = candidates.reduce((a, b) => score(a) <= score(b) ? a : b); label.x = best.x; label.y = best.y; occupied.push({ x: best.x, y: best.y, w: label.w, h: label.h });
+      });
     }
     labels.forEach(label => {
       label.button.style.transform = `translate3d(${label.x.toFixed(1)}px,${label.y.toFixed(1)}px,0)`;
@@ -302,6 +486,12 @@ export function createScene(container, { onSelect } = {}) {
   function update(next = {}) {
     state = { ...state, ...next }; const affected = asSet(state.impacted), patched = asSet(state.patched, ['vendor']), isolated = asSet(state.isolated, ['vendor']);
     state.futureMode = Boolean(state.futureMode); state.pressure = Math.min(1, Math.max(0, Number(state.pressure) || 0));
+    dialogueOverlay.update(state.dialogue);
+    people.forEach((person, id) => {
+      person.active = dialogueOverlay.active?.nodeId === id; person.mood = person.active ? dialogueOverlay.active.mood : 'calm';
+      person.surprise.visible = person.mood === 'alert'; person.smile.visible = person.mood !== 'alert'; person.marker.visible = person.active && person.mood === 'alert';
+      person.brows[0].rotation.z = person.mood === 'alert' ? -.23 : 0; person.brows[1].rotation.z = person.mood === 'alert' ? .23 : 0;
+    });
     paintPHP(patched.has('vendor'), state.futureMode);
     const maintenanceColor = new THREE.Color(COLORS.amber);
     coreLight.color.set(COLORS.purple); if (state.futureMode) coreLight.color.lerp(maintenanceColor, state.pressure * .8);
@@ -336,6 +526,16 @@ export function createScene(container, { onSelect } = {}) {
     if (focusTarget) { controls.target.lerp(focusTarget, .06); if (controls.target.distanceTo(focusTarget) < .02) focusTarget = null; needsLabelLayout = true; }
     if (desiredZoom !== null) { camera.zoom += (desiredZoom - camera.zoom) * .09; camera.updateProjectionMatrix(); if (Math.abs(desiredZoom - camera.zoom) < .002) { camera.zoom = desiredZoom; desiredZoom = null; } needsLabelLayout = true; }
     controls.update();
+    people.forEach((person, id) => {
+      const node = structures.get(id).node, p = PEOPLE[id];
+      person.rig.rotation.y = Math.atan2(camera.position.x - node.x - p.x, camera.position.z - node.z - p.z);
+      const wave = reducedMotion ? 0 : Math.sin(elapsed * (person.active ? 3.4 : 1.3) + person.phase);
+      person.rig.position.y = person.baseY + (reducedMotion ? 0 : Math.sin(elapsed * 1.8 + person.phase) * (person.active && person.mood === 'relief' ? .035 : .012));
+      person.head.rotation.z = (person.active ? -.07 : 0) + wave * .018;
+      person.leftArm.rotation.z = -.12 - wave * .035;
+      person.rightArm.rotation.z = person.active ? (person.mood === 'alert' ? 1.55 : person.mood === 'relief' ? 1.0 : .48) + wave * .12 : .12 + wave * .035;
+      person.marker.rotation.y = -person.rig.rotation.y;
+    });
     if (!reducedMotion) {
       spinners.forEach(s => { s.object.rotation[s.axis] += dt * s.speed; });
       particles.forEach(p => { const speed = p.route.security ? .1 : p.route.status === 'impacted' ? .025 : .055; p.object.position.copy(p.curve.getPointAt((elapsed * speed + p.phase) % 1)); });
@@ -354,7 +554,7 @@ export function createScene(container, { onSelect } = {}) {
       disposed = true; cancelAnimationFrame(frame); observer.disconnect(); controls.dispose(); renderer.domElement.removeEventListener('pointerdown', down); renderer.domElement.removeEventListener('pointerup', up);
       const geometries = new Set(), materials = new Set(), textures = new Set([glowTexture, phpTexture]);
       scene.traverse(o => { if (o.geometry) geometries.add(o.geometry); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => materials.add(m)); });
-      geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose()); renderer.dispose(); renderer.domElement.remove(); labelsRoot.remove();
+      geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose()); dialogueOverlay.dispose(); renderer.dispose(); renderer.domElement.remove(); labelsRoot.remove();
     },
   };
 }

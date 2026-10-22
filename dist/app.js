@@ -1,5 +1,6 @@
 import { createScene } from './scene.js';
 import { createFutureExperience } from './future.js';
+import { CAST, crisisDialogue, crisisVoices, crisisVoiceFor } from './characters.js';
 import { STAGES, createState, choose, snapshot, summarize, INDICATOR_NOTICE } from './scenario.js';
 import { REFERENCES, PHP_INFO } from './references.js';
 
@@ -7,6 +8,8 @@ const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let state = createState(), started = false, pending = false, viewDay = 0, perspective = 'observed', selected = null, rotating = false;
 let playback = null, toastTimer, futureExperience = null, futureMode = false;
+let playerName = '';
+try { playerName = (localStorage.getItem('blindspot-player') || '').slice(0,16); } catch {}
 const ordinaryHeading = document.querySelector('.atlas-heading').innerHTML;
 const STORAGE = 'coworker-crisis-v1';
 try {
@@ -28,7 +31,8 @@ const notify = message => {clearTimeout(toastTimer); $('toast').textContent=mess
 function updateScene(){
   if(futureMode)return;
   const snap=snapshot(state,viewDay);
-  scene.update({futureMode:false,pressure:0,day:viewDay,visibility:perspective,impacted:snap.impacted,isolated:snap.isolated,patched:snap.patched,selected,layer:'all',prevented:snap.prevented});
+  const dialogue=crisisDialogue(dialogueContext());
+  scene.update({dialogue,futureMode:false,pressure:0,day:viewDay,visibility:perspective,impacted:snap.impacted,isolated:snap.isolated,patched:snap.patched,selected,layer:'all',prevented:snap.prevented});
   $('map-mode-label').textContent = !started ? '平常時のつながり' : perspective==='truth' ? '演習で仮定した全体像' : 'その時点で見えること';
   $('observed-view').classList.toggle('selected',perspective==='observed');
   $('truth-view').classList.toggle('selected',perspective==='truth');
@@ -50,8 +54,27 @@ function renderTimeline(){
   $('timeline-hint').textContent=state.stageIndex===5&&!pending?'日付を選んで、判断と影響を振り返る。再生ボタンで30日間をリプレイ。':'意思決定をすると時間が進みます。過去の日付に戻って振り返れます。';
 }
 const iconPerson=`<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2M9 15l3 3 3-3" stroke="currentColor" stroke-width="1.3"/></svg>`;
+function dialogueContext(){
+ const stage=STAGES[stageIndexAt(viewDay)];
+ return {day:viewDay,started,pending,snapshot:snapshot(state,viewDay),decision:state.decisions.find(d=>d.stageId===stage.id)};
+}
+function avatarMarkup(person,mood='calm'){
+ return `<span class="person-avatar mood-${mood}" style="--person:${person.color||'#b4a5ff'}" aria-hidden="true"><i class="avatar-head"></i><i class="avatar-body"></i><small>!</small></span>`;
+}
+function playerHUD(){
+ const count=state.decisions.filter(d=>d.day<=viewDay).length;
+ return `<div class="game-hud"><button class="player-chip" id="player-edit" aria-label="プレイヤー名を変更">${avatarMarkup({color:'#b4a5ff'})}<span><small>YOU / 社長</small><b>${escape(playerName||'あなた')}</b></span><span class="player-pencil">✎</span></button><div class="quest-status"><span>${count===5?'5つの判断を記録':'MISSION '+String(Math.min(activeIndex()+1,5)).padStart(2,'0')}<small> ${count} / 5</small></span><div class="quest-pips">${Array.from({length:5},(_,i)=>`<i class="${i<count?'done':''}"></i>`).join('')}</div></div><span class="game-label">STORY MODE</span></div>`;
+}
+function voicesMarkup(){
+ return `<section class="field-voices" aria-label="演習内の架空の会話"><div class="field-voices-head"><span>現場の声</span><small>演習内の会話</small></div><div class="voice-grid">${[crisisDialogue(dialogueContext()),...crisisVoices(dialogueContext()).slice(0,2)].map(v=>`<article class="voice-card mood-${v.mood}">${avatarMarkup(CAST[v.nodeId],v.mood)}<div><div class="voice-person"><b>${escape(v.name)}</b><small>${escape(v.role)}</small></div><p>「${escape(v.text)}」</p></div></article>`).join('')}</div></section>`;
+}
+function editPlayer(){
+ openModal('YOUR CHARACTER',`<h2>この会社の社長は、あなた。</h2><p>物語の中で使う名前を決められます。</p><label class="player-name-label">プレイヤー名<input id="edit-player-name" maxlength="16" value="${escape(playerName)}" placeholder="あなた" autocomplete="off"></label><button class="primary" id="save-player">この名前で続ける →</button><p class="small-note">名前はこのブラウザだけに保存します。</p>`);
+ $('save-player').addEventListener('click',()=>{playerName=$('edit-player-name').value.trim().slice(0,16);try{localStorage.setItem('blindspot-player',playerName);}catch{}$('modal').close();render();});
+}
 function intro(){
- $('brief-content').innerHTML=`<div class="brief-top"><span class="chapter">YOUR MISSION</span><span class="pill">5 DECISIONS · 約5分</span></div><p class="intro-copy">あなたは、部品メーカーの社長。<br>委託先のPHPから始まる危機に、<br>情報がそろわないまま、判断を下します。</p><button class="primary" id="start">社長として、判断を始める <span class="arrow">↗</span></button><button class="intro-future" id="intro-future">AI時代の、この先180日を見てみる →</button><p class="small-note">企業・被害・時間経過は、学習用の架空設定です。</p>`;
+ $('brief-content').innerHTML=`<div class="brief-top"><span class="chapter">PLAY AS THE CEO</span><span class="pill">5 MISSIONS · 約5分</span></div><p class="intro-copy">あなたは、部品メーカーの社長。<br>現場の声を聞き、会社の次の一手を決めよう。</p><div class="player-setup">${avatarMarkup({color:'#b4a5ff'})}<label><span>プレイヤー名 <small>任意</small></span><input id="player-name" maxlength="16" value="${escape(playerName)}" placeholder="あなた" autocomplete="off" aria-label="プレイヤー名"></label><span class="player-rank">CEO</span></div><button class="primary" id="start">社長として、判断を始める <span class="arrow">↗</span></button><button class="intro-future" id="intro-future">AI時代の、この先180日を見てみる →</button><p class="small-note">登場人物・会話・被害は、学習用の架空設定です。</p>`;
+ $('player-name').addEventListener('input',e=>{playerName=e.target.value.trim().slice(0,16);try{localStorage.setItem('blindspot-player',playerName);}catch{}});
  $('intro-future').addEventListener('click',openFuture);
  $('start').addEventListener('click',()=>{started=true;render();save();$('briefing').scrollIntoView({behavior:'smooth',block:'nearest'});$('briefing').focus({preventScroll:true});});
 }
@@ -64,13 +87,15 @@ function renderBrief(){
  if(idx===5&&!pending){renderResult();return;}
  const title=snap.prevented&&idx===4?'要求と事実を、切り分ける。':stage.title;
  const preventionNote=snap.prevented&&idx>=2?'<p class="prevention-note">事前更新で想定した侵入は防げています。以下は、被害が発生した場合にも備える対応方針として選んでください。</p>':'';
- $('brief-content').innerHTML=`<div class="decision-layout"><section class="brief-story"><div class="brief-top"><span class="chapter">DECISION <b>${String(idx+1).padStart(2,'0')} / 05</b></span><span class="pill">DAY ${String(viewDay).padStart(2,'0')} · ${escape(stage.time)}</span></div>${historical?'<div class="replay-banner">過去の判断と、その日に見えていた情報</div>':''}<h2 class="decision-title">${escape(title)}</h2><div class="message"><span class="sender">${escape(stage.sourceRole)}</span><p>${escape(snap.message||stage.message)}</p></div>${evidenceMarkup(snap.evidence||stage.evidence)}</section><section class="decision-options">${historical||pending?`${metricsMarkup(snap)}<div class="feedback"><b>あなたの判断：${escape(decision?.title)}</b>${escape(decision?.feedback)}</div><p class="small-note">${escape(INDICATOR_NOTICE)}</p><button class="primary" id="advance">${historical?'現在の場面に戻る':idx===4?'30日後を振り返る':'次の場面へ'} <span class="arrow">→</span></button>`:`<p class="eyebrow action-label">MAKE YOUR CALL</p><p class="question">${escape(stage.prompt)}</p>${preventionNote}<div class="choices">${stage.choices.map((c,i)=>`<button class="choice" data-choice="${escape(c.id)}"><span class="choice-code">${'ABC'[i]}</span><span><b>${escape(c.title)}</b><small>${escape(c.description)}</small></span><span class="choice-arrow">↗</span></button>`).join('')}</div>`}</section></div>`;
+ $('brief-content').innerHTML=`${playerHUD()}${voicesMarkup()}<div class="decision-layout"><section class="brief-story"><div class="brief-top"><span class="chapter">DECISION <b>${String(idx+1).padStart(2,'0')} / 05</b></span><span class="pill">DAY ${String(viewDay).padStart(2,'0')} · ${escape(stage.time)}</span></div>${historical?'<div class="replay-banner">過去の判断と、その日に見えていた情報</div>':''}<h2 class="decision-title">${escape(title)}</h2><div class="message"><span class="sender">${escape(stage.sourceRole)}</span><p>${escape(snap.message||stage.message)}</p></div>${evidenceMarkup(snap.evidence||stage.evidence)}</section><section class="decision-options">${historical||pending?`${metricsMarkup(snap)}<div class="feedback"><span class="choice-locked">✓ 判断を記録</span><b>あなたの判断：${escape(decision?.title)}</b>${escape(decision?.feedback)}</div><p class="small-note">${escape(INDICATOR_NOTICE)}</p><button class="primary" id="advance">${historical?'現在の場面に戻る':idx===4?'30日後を振り返る':'次の場面へ'} <span class="arrow">→</span></button>`:`<p class="eyebrow action-label">MAKE YOUR CALL</p><p class="question">${escape(stage.prompt)}</p>${preventionNote}<div class="choices">${stage.choices.map((c,i)=>`<button class="choice" data-choice="${escape(c.id)}"><span class="choice-code">${'ABC'[i]}</span><span><b>${escape(c.title)}</b><small>${escape(c.description)}</small></span><span class="choice-arrow">↗</span></button>`).join('')}</div>`}</section></div>`;
+ $('player-edit').addEventListener('click',editPlayer);
  if(historical||pending)$('advance').addEventListener('click',()=>{if(!historical)pending=false;viewDay=STAGES[activeIndex()].day;stopPlayback();render();save();});
  else $('brief-content').querySelectorAll('[data-choice]').forEach(b=>b.addEventListener('click',()=>{state=choose(state,b.dataset.choice);pending=true;render();save();}));
 }
 function renderResult(){
  const result=summarize(state),snap=snapshot(state,30);
- $('brief-content').innerHTML=`<div class="brief-top"><span class="chapter">AFTER ACTION <b> / DAY 30</b></span><span class="result-badge">演習完了</span></div><h2 class="decision-title">見えていたら、<br>変えられた未来。</h2><p class="review-note">${escape(result.summary)}</p>${metricsMarkup(snap)}<p class="question">あなたの判断から</p><ul class="result-list">${[...result.strengths.slice(0,2),...result.opportunities.slice(0,2)].map(x=>`<li>${escape(x)}</li>`).join('')}</ul><div class="result-actions"><button class="primary" id="comparison-open">もうひとつの未来を見る <span class="arrow">↗</span></button><button class="secondary" id="report-download">意思決定の記録を保存 ↓</button><button class="text-button" id="retry">違う判断で、もう一度体験する ↺</button></div><p class="small-note">${escape(INDICATOR_NOTICE)}</p>`;
+ $('brief-content').innerHTML=`<div class="brief-top"><span class="chapter">AFTER ACTION <b> / DAY 30</b></span><span class="result-badge">演習完了</span></div><h2 class="decision-title">見えていたら、<br>変えられた未来。</h2><p class="review-note">${escape(result.summary)}</p>${metricsMarkup(snap)}<p class="question">あなたの判断から</p><ul class="result-list">${[...result.strengths.slice(0,2),...result.opportunities.slice(0,2)].map(x=>`<li>${escape(x)}</li>`).join('')}</ul><div class="result-actions"><button class="primary" id="comparison-open">もうひとつの未来を見る <span class="arrow">↗</span></button><button class="secondary" id="result-future">次のステージ：この先180日へ →</button><button class="secondary" id="report-download">意思決定の記録を保存 ↓</button><button class="text-button" id="retry">違う判断で、もう一度体験する ↺</button></div><p class="small-note">${escape(INDICATOR_NOTICE)}</p>`;
+ $('result-future').addEventListener('click',openFuture);
  $('comparison-open').addEventListener('click',openComparison);
  $('report-download').addEventListener('click',downloadReport);
  $('retry').addEventListener('click',reset);
@@ -88,20 +113,21 @@ const nodes={
  hospital:{name:'医療機関',role:'製品の供給を受ける架空の取引先。図の橙色は供給の遅れを示し、院内ネットワークへの侵入を意味しません。',link:'納入遅延 → 調達・現場業務への影響'},
  retail:{name:'販売店・顧客',role:'製品を必要とする取引先とその顧客。遠い企業のシステム障害でも、納期や在庫に影響が届くことがあります。',link:'入荷遅延 → 在庫不足 → 顧客への説明'}
 };
-function showNode(id){let n=nodes[id];if(!n)return;if(futureMode&&id==='vendor')n={name:'共通ソフトウェア基盤',role:'PHPを含む共通のソフトウェアを、複数のサービスが使う場面です。新たな課題が届くたびに、影響範囲の確認と更新の判断が続きます。',link:'同じ課題に対して、対応計画を比較しています。'};const snap=snapshot(state,viewDay);$('node-detail').hidden=false;$('node-detail').innerHTML=`<div class="node-head"><b>${escape(n.name)}</b><button id="close-node" aria-label="拠点の説明を閉じる">×</button></div><p>${escape(n.role)}</p><div class="node-status">${futureMode?'橙は架空の対応負荷。侵害の予測ではありません。':snap.impacted.includes(id)?'● 演習上の業務影響あり':'○ '+(id==='vendor'&&snap.patched?'更新確認済み':'業務影響は表示されていません')}</div><p>${escape(n.link)}</p>`;$('close-node').addEventListener('click',()=>{selected=null;$('node-detail').hidden=true;updateScene();});}
+function showNode(id){let n=nodes[id];if(!n)return;if(futureMode&&id==='vendor')n={name:'共通ソフトウェア基盤',role:'PHPを含む共通のソフトウェアを、複数のサービスが使う場面です。新たな課題が届くたびに、影響範囲の確認と更新の判断が続きます。',link:'同じ課題に対して、対応計画を比較しています。'};if(futureMode&&id==='hospital')n={name:'医療機関の調達',role:'医療機関の調達担当も、取引先のサービスや納品予定を確認する場面を想定しています。橙は更新対応の負荷を表し、実際の納入遅延や院内への侵入を示しません。',link:'取引先の状況確認 → 調達の段取り・連絡'};const snap=snapshot(state,viewDay);const person=CAST[id], voice=futureMode?{text:'更新の確認が、私たちの仕事にもつながっています。どんな計画なら続けられるか、一緒に考えたいです。',mood:'calm'}:crisisVoiceFor(id,dialogueContext());$('node-detail').hidden=false;$('node-detail').innerHTML=`<div class="node-head"><span class="node-person">${avatarMarkup(person,voice.mood)}<span><b>${escape(person.name)}</b><small>${escape(person.role)}</small></span></span><button id="close-node" aria-label="拠点の説明を閉じる">×</button></div><p class="node-quote">「${escape(voice.text)}」</p><b class="node-place">${escape(n.name)}</b><p>${escape(n.role)}</p><div class="node-status">${futureMode?'橙は架空の対応負荷。侵害の予測ではありません。':snap.impacted.includes(id)?'● 演習上の業務影響あり':'○ '+(id==='vendor'&&snap.patched?'更新確認済み':'業務影響は表示されていません')}</div><p>${escape(n.link)}</p>`;$('close-node').addEventListener('click',()=>{selected=null;$('node-detail').hidden=true;updateScene();});}
 function openModal(kicker,html){stopPlayback();futureExperience?.pause();$('modal-kicker').textContent=kicker;$('modal-body').innerHTML=html;$('modal').showModal();$('modal').scrollTop=0;}
-function openFuture(){
+function openFuture(initialState){
+ if(initialState instanceof Event)initialState=undefined;
  if(futureMode){$('briefing').scrollIntoView({behavior:'smooth'});return;}
- stopPlayback();futureMode=true;selected=null;$('node-detail').hidden=true;
+ stopPlayback();futureMode=true;history.replaceState(null,'','#future');selected=null;$('node-detail').hidden=true;
  document.body.classList.remove('mode-intro','mode-active','mode-result');document.body.classList.add('mode-future');
  $('future-open').classList.add('active');$('exercise-nav').classList.remove('active');
  document.querySelector('.atlas-heading').innerHTML='<p class="eyebrow"><span class="short-line"></span> AFTER PHP2SHELL</p><h1>その先の、<br><span>180</span>日を想像する。</h1><p class="subtitle">発見が増える。更新が続く。<br>社会を支える企業は、ついていけるか。</p><p class="future-scene-note">橙は対応負荷の表現。侵害の予測ではありません。</p>';
  $('map-mode-label').textContent='共通基盤と更新の負荷 / 架空の将来';
- futureExperience=createFutureExperience($('brief-content'),{onSceneUpdate:data=>scene.update({...data,isolated:false}),onClose:closeFuture});
+ futureExperience=createFutureExperience($('brief-content'),{initialState,onStateChange:()=>{},onSceneUpdate:data=>{scene.update({...data,isolated:false});if(data.dialogue)$('map-mode-label').textContent=(data.plan==='prepared'?'備えた会社':'あなたの会社')+' / '+data.dialogue.stamp;},onClose:closeFuture});
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function closeFuture(){
- futureExperience?.dispose();futureExperience=null;futureMode=false;document.body.classList.remove('mode-future');
+ futureExperience?.dispose();futureExperience=null;futureMode=false;history.replaceState(null,'',location.pathname+location.search);document.body.classList.remove('mode-future');
  document.querySelector('.atlas-heading').innerHTML=ordinaryHeading;
  $('future-open').classList.remove('active');$('exercise-nav').classList.add('active');
  render();window.scrollTo({top:0,behavior:'smooth'});
@@ -124,3 +150,4 @@ $('rotate').addEventListener('click',()=>{rotating=!rotating;scene.setRotate(rot
 $('restart').addEventListener('click',reset);$('play-timeline').addEventListener('click',startPlayback);$('timeline-range').addEventListener('input',e=>{stopPlayback();viewDay=Number(e.target.value);render();save();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopPlayback();});
 render();
+if(location.hash==='#future')openFuture();
