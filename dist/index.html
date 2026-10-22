@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#090d18">
+<meta name="description" content="PHPの脆弱性。その先の30日間。PHP2Shellを入口に、受注・製造・物流へ波及する危機を3Dで体験する意思決定教材。">
+<title>PHP2Shell — 空白の30日間</title>
+<link rel="icon" type="image/svg+xml" href="./favicon.svg"><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./future.css">
+</head>
+<body class="mode-intro">
+<a class="skip" href="#briefing">演習の説明へ</a>
+<header class="header">
+<a class="brand" href="./" aria-label="空白の30日間 ホーム"><span class="brand-mark" aria-hidden="true">[ : ]</span><span>THE BLIND SPOT<small>空白の30日間</small></span></a>
+<div class="header-center"><span class="status-light"></span> INTERACTIVE INCIDENT EXPERIENCE <span class="edition">VOL. 04</span></div>
+<nav aria-label="メインナビゲーション"><button class="nav-link active" id="exercise-nav">体験</button><button class="nav-link" id="future-open">この先180日</button><button class="nav-link" id="php-open">PHPを知る ↗</button><button class="nav-link" id="sources-open">実例と資料</button><button class="icon-button" id="help-open" aria-label="操作ガイド">?</button></nav>
+</header>
+<main class="workspace">
+<section class="timeline-panel" aria-label="30日間の時間軸">
+<div class="timeline-meta"><span class="eyebrow">ELAPSED</span><div class="day-readout"><small>DAY</small><strong id="day-value">00</strong><span>/ 30 DAYS</span></div><button id="play-timeline" class="play-button" aria-label="時間軸を再生">▶</button></div>
+<div class="timeline-track"><div class="track-line"><div id="track-progress"></div></div><div id="timeline-stages"></div><input id="timeline-range" type="range" min="0" max="30" value="0" step="1" aria-label="表示する日数"></div>
+<div class="timeline-right"><span class="duration">5 MIN</span><button id="restart" aria-label="はじめから">↺</button></div>
+</section>
+<div class="content-stage">
+<section class="atlas" aria-label="PHP基盤と社会の3Dネットワーク">
+<div id="scene"></div>
+<div class="atlas-heading"><p class="eyebrow"><span class="short-line"></span> PHP2SHELL <span class="topic-tag">SECURITY INCIDENT</span></p><h1>PHPの脆弱性。<br>その先の<span>30</span>日間<span class="title-period">。</span></h1><p class="subtitle">ひとつのWeb基盤の停止が、<br>会社と社会の「いつも」を変えていく。</p><div class="version-flow"><div><small>シナリオ開始時</small><strong>PHP <b>8.3.35</b><i>未修正</i></strong></div><span class="version-arrow">→</span><div><small>8.3系の修正版</small><strong>PHP <b>8.3.36</b></strong></div></div><p class="cve-caption">CVE-2026-109618 / CVE-2026-109619</p></div>
+<div class="map-top-right"><span class="live-dot"></span><span id="map-mode-label">平常時のつながり</span><span class="map-index">SUPPLIER → BUSINESS → SOCIETY</span></div>
+<div class="map-controls" role="group" aria-label="3Dの操作"><button id="zoom-in" aria-label="拡大">+</button><button id="zoom-out" aria-label="縮小">−</button><button id="reset-view" aria-label="全体を見渡す">⌖</button><button id="rotate" aria-label="自動回転を開始" aria-pressed="false">↻</button></div>
+<div class="node-detail" id="node-detail" hidden></div>
+<div class="view-settings"><span class="view-label">PERSPECTIVE</span><div class="view-switch" role="group" aria-label="視点"><button class="selected" id="observed-view" aria-pressed="true">社長に見えること</button><button id="truth-view" aria-pressed="false">仮定した全体像</button></div><p id="perspective-note">拠点を選んで、つながりと役割を確認。</p></div>
+<div class="legend" aria-label="マップの凡例"><span><i class="normal"></i>取引のつながり</span><span><i class="impact"></i>業務への影響</span><span><i class="intrusion"></i>侵害経路の仮定</span></div>
+<div class="map-credit"><span>3D DEPENDENCY NETWORK</span><span>DRAG · ROTATE / SCROLL · ZOOM</span></div>
+</section>
+<aside class="briefing" id="briefing" tabindex="-1" aria-label="演習と意思決定"><div id="brief-content"></div></aside>
+<p class="timeline-hint" id="timeline-hint">意思決定をすると時間が進みます。経験した日付に戻って振り返れます。</p>
+</div>
+</main>
+<footer class="footer"><span>THE BLIND SPOT <b>PHP2SHELL EDITION</b></span><span>学習用フィクション / 情報確認 2026.10.23</span></footer>
+<dialog id="modal"><div class="modal-head"><span class="eyebrow" id="modal-kicker"></span><button class="icon-button" id="modal-close" aria-label="閉じる">×</button></div><div id="modal-body"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="./app.js"></script>
+</body></html>
