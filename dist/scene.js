@@ -20,7 +20,7 @@ const PEOPLE = {
   retail: { shirt: '#9bcfc1', skin: '#c38b6e', hair: '#343140', style: 'pony', role: 'お店のスタッフ', x: -1.55, z: 1.2 },
 };
 
-function portraitSVG(id, mood = 'calm') {
+export function portraitSVG(id, mood = 'calm') {
   const p = PEOPLE[id] || PEOPLE.vendor;
   const hat = p.style === 'helmet' ? '<path d="M17 25a15 15 0 0 1 30 0v3H17Z" fill="#edb965"/><path d="M14 28h36M32 12v14" stroke="#f8d99b" stroke-width="3"/>' : p.style === 'cap' ? '<path d="M17 24a15 15 0 0 1 30 0v4H17Z" fill="#75a4d6"/><path d="M29 27h22" stroke="#99c3ec" stroke-width="4"/>' : '';
   const glasses = id === 'vendor' ? '<g fill="none" stroke="#313342" stroke-width="1.5"><rect x="21" y="27" width="9" height="7" rx="2"/><rect x="34" y="27" width="9" height="7" rx="2"/><path d="M30 30h4"/></g>' : '';
@@ -72,6 +72,12 @@ function installStyle() {
     .supply-city-leaders{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
     .supply-city-leaders line{stroke:#60778d;stroke-width:.6;opacity:.5}
     .supply-city-label{position:absolute;left:0;top:0;display:flex;align-items:center;gap:8px;min-width:104px;padding:8px 9px 8px 0;border:0;border-bottom:1px solid #50607850;border-radius:0;background:linear-gradient(90deg,#080c15d9,#080c1570);color:#e6eaf5;font-family:inherit;text-align:left;pointer-events:auto;cursor:pointer;will-change:transform;white-space:nowrap;line-height:1.2;transition:border-color .2s,color .2s}
+    .supply-city-label[hidden]{display:none!important}
+    [data-story-scene=true] .supply-city-label{pointer-events:none;cursor:default;background:linear-gradient(90deg,#080c1590,#080c1520);border-bottom-color:#50607830}
+    [data-story-scene=true] .supply-city-label small{color:#a0acc1}
+    [data-story-scene=true] .supply-city-label:disabled{opacity:1}
+    [data-story-scene=true] .supply-city-fallback{align-content:start;padding-top:70px;padding-bottom:var(--story-scene-bottom,0px)}
+    [data-story-scene=true] .supply-city-fallback button:disabled{opacity:1;cursor:default}
     .supply-city-label:hover,.supply-city-label[aria-pressed=true]{border-bottom-color:#a99bff;color:#fff}
     .supply-city-label:focus-visible{outline:2px solid #a99bff;outline-offset:4px}
     .supply-city-number{display:grid;place-items:center;width:23px;height:23px;background:#17343c;color:#7fdae0;font:500 9px/1 ui-monospace,SFMono-Regular,monospace;border:1px solid #62ced54d}
@@ -161,7 +167,8 @@ function fallback(container, onSelect) {
   const root = document.createElement('div'); root.className = 'supply-city-fallback'; root.setAttribute('aria-label', 'PHPランタイムと業務依存関係');
   const buttons = NODES.map(node => { const b = document.createElement('button'); b.type = 'button'; b.innerHTML = `<span class="supply-fallback-portrait" aria-hidden="true">${portraitSVG(node.id)}</span><span class="supply-fallback-name">${node.number}　${node.name}</span>`; b.onclick = () => onSelect?.(node.id); root.appendChild(b); return [node.id, b]; });
   container.appendChild(root);
-  const dialogue = createDialogueOverlay(container); let currentState = { dialogue: null };
+  const dialogue = createDialogueOverlay(container); let currentState = { dialogue: null }, storyMode = false, storyFocus = null;
+  function storyLabels() { buttons.forEach(([id, button]) => { button.disabled = storyMode; button.tabIndex = storyMode ? -1 : 0; button.hidden = storyMode && id !== 'vendor' && id !== storyFocus; button.style.display = button.hidden ? 'none' : ''; }); }
   function layout() {
     if (!dialogue.active) return; const bounds = container.getBoundingClientRect(), target = buttons.find(([id]) => id === dialogue.active.nodeId)?.[1].getBoundingClientRect();
     const obstacles = buttons.map(([, button]) => { const r = button.getBoundingClientRect(); return { x: r.left - bounds.left, y: r.top - bounds.top, w: r.width, h: r.height }; });
@@ -170,7 +177,10 @@ function fallback(container, onSelect) {
   const observer = new ResizeObserver(layout); observer.observe(container);
   return {
     update(next) { currentState = { ...currentState, ...next }; const state = currentState; buttons.forEach(([id, b]) => { b.dataset.status = nodeStatus(id, state); b.setAttribute('aria-pressed', String(state.selected === id)); if (id === 'vendor') b.querySelector('.supply-fallback-name').textContent = state.futureMode ? '共通ソフトウェア基盤 · 継続的な更新' : `委託先のPHP基盤 · ${asSet(state.patched, ['vendor']).has('vendor') ? '8.3.36 / 更新確認済み' : '8.3.35 / 未修正'}`; }); dialogue.update(state.dialogue); layout(); },
-    focus(id) { buttons.find(([key]) => key === id)?.[1].focus(); }, reset() {}, zoom() {}, setRotate() {}, dispose() { observer.disconnect(); dialogue.dispose(); root.remove(); },
+    focus(id) { if (!storyMode) buttons.find(([key]) => key === id)?.[1].focus(); }, reset() {}, zoom() {}, setRotate() {},
+    setStoryMode(enabled = true) { storyMode = Boolean(enabled); container.dataset.storyScene = String(storyMode); storyLabels(); },
+    focusStory(id = null) { storyFocus = NODES.some(n => n.id === id) ? id : null; storyLabels(); },
+    dispose() { observer.disconnect(); dialogue.dispose(); root.remove(); delete container.dataset.storyScene; },
   };
 }
 
@@ -211,6 +221,7 @@ export function createScene(container, { onSelect } = {}) {
   const structures = new Map(), people = new Map(), pickable = [], routes = [], particles = [], spinners = [], pulses = [];
   let state = { day: 0, visibility: 'observed', impacted: [], patched: false, prevented: false, isolated: false, selected: null, layer: 'all', futureMode: false, pressure: 0, dialogue: null };
   let disposed = false, frame = 0, elapsed = 0, lastTime = null, focusTarget = null, desiredZoom = null, needsLabelLayout = true;
+  let storyMode = false, storyFocus = null, storyBottom = 0, storyTop = 0;
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const basic = (color, opacity = 1) => new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity, toneMapped: false, depthWrite: opacity === 1 });
   function box(group, x, y, z, w, h, d, material = metal) { const o = new THREE.Mesh(unitBox, material); o.position.set(x, y, z); o.scale.set(w, h, d); group.add(o); return o; }
@@ -410,7 +421,7 @@ export function createScene(container, { onSelect } = {}) {
     const button = document.createElement('button'); button.type = 'button'; button.className = 'supply-city-label'; button.dataset.node = node.id; button.dataset.status = 'normal'; button.setAttribute('aria-pressed', 'false');
     button.setAttribute('aria-label', `${node.name}、${node.sub}の詳細を表示`);
     button.innerHTML = `<span class="supply-city-number">${node.number}</span><span><strong>${node.name}</strong><small>${node.sub}</small></span>`;
-    button.onclick = event => { event.stopPropagation(); onSelect?.(node.id); }; labelsRoot.appendChild(button);
+    button.onclick = event => { event.stopPropagation(); if (!storyMode) onSelect?.(node.id); }; labelsRoot.appendChild(button);
     const leader = document.createElementNS('http://www.w3.org/2000/svg', 'line'); svg.appendChild(leader);
     return { node, button, leader, anchor: new THREE.Vector3(node.x, node.height + .5, node.z), x: 0, y: 0 };
   });
@@ -418,11 +429,16 @@ export function createScene(container, { onSelect } = {}) {
   const projected = new THREE.Vector3(); let width = 1, height = 1;
   function layoutLabels() {
     world.updateMatrixWorld(true); camera.updateMatrixWorld();
+    const layoutHeight = height - storyBottom, layoutTop = storyTop;
+    const visibleLabels = labels.filter(label => !storyMode || label.node.id === 'vendor' || label.node.id === storyFocus);
     labels.forEach(label => {
+      const visible = visibleLabels.includes(label); label.button.hidden = !visible; label.leader.style.display = visible ? '' : 'none';
+    });
+    visibleLabels.forEach(label => {
       projected.copy(label.anchor).project(camera); label.w = label.button.offsetWidth || 120; label.h = label.button.offsetHeight || 42;
       label.px = (projected.x + 1) * width / 2; label.py = (1 - projected.y) * height / 2;
       label.x = Math.max(7, Math.min(width - label.w - 7, label.px - label.w / 2));
-      label.y = Math.max(8, Math.min(height - label.h - 8, label.py - label.h));
+      label.y = Math.max(layoutTop + 8, Math.min(layoutHeight - label.h - 8, label.py - label.h));
     });
     let bubbleBounds = null, coreBounds = null;
     if (dialogueOverlay.active) {
@@ -431,21 +447,21 @@ export function createScene(container, { onSelect } = {}) {
       const anchor = { x: (projected.x + 1) * width / 2, y: (1 - projected.y) * height / 2 };
       projected.set(0, 2, 0).project(camera); const unit = height / (camera.top - camera.bottom) * camera.zoom;
       coreBounds = { x: (projected.x + 1) * width / 2 - 1.9 * unit, y: (1 - projected.y) * height / 2 - 2.1 * unit, w: 3.8 * unit, h: 4.2 * unit };
-      bubbleBounds = dialogueOverlay.layout({ width, height, anchor, obstacles: labels, core: coreBounds });
+      bubbleBounds = dialogueOverlay.layout({ width, height: layoutHeight, anchor, obstacles: visibleLabels, core: coreBounds });
     }
     function avoid(label, obstacle) {
       if (!obstacle || !overlapArea(label, obstacle, 5)) return;
-      const choices = [{ x: label.x, y: obstacle.y - label.h - 9 }, { x: label.x, y: obstacle.y + obstacle.h + 9 }, { x: obstacle.x - label.w - 9, y: label.y }, { x: obstacle.x + obstacle.w + 9, y: label.y }].filter(p => p.x >= 7 && p.y >= 7 && p.x + label.w <= width - 7 && p.y + label.h <= height - 7);
+      const choices = [{ x: label.x, y: obstacle.y - label.h - 9 }, { x: label.x, y: obstacle.y + obstacle.h + 9 }, { x: obstacle.x - label.w - 9, y: label.y }, { x: obstacle.x + obstacle.w + 9, y: label.y }].filter(p => p.x >= 7 && p.y >= layoutTop + 7 && p.x + label.w <= width - 7 && p.y + label.h <= layoutHeight - 7);
       if (choices.length) { const best = choices.reduce((a, b) => Math.hypot(a.x - label.x, a.y - label.y) < Math.hypot(b.x - label.x, b.y - label.y) ? a : b); label.x = best.x; label.y = best.y; }
     }
     for (let pass = 0; pass < 14; pass++) {
-      labels.forEach(label => { avoid(label, bubbleBounds); avoid(label, coreBounds); });
-      for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++) {
-        const a = labels[i], b = labels[j];
+      visibleLabels.forEach(label => { avoid(label, bubbleBounds); avoid(label, coreBounds); });
+      for (let i = 0; i < visibleLabels.length; i++) for (let j = i + 1; j < visibleLabels.length; j++) {
+        const a = visibleLabels[i], b = visibleLabels[j];
         const ox = Math.min(a.x + a.w + 7, b.x + b.w + 7) - Math.max(a.x, b.x), oy = Math.min(a.y + a.h + 8, b.y + b.h + 8) - Math.max(a.y, b.y);
         if (ox > 0 && oy > 0) {
           const shift = oy / 2 + 1; if (a.y <= b.y) { a.y -= shift; b.y += shift; } else { a.y += shift; b.y -= shift; }
-          a.y = Math.max(7, Math.min(height - a.h - 7, a.y)); b.y = Math.max(7, Math.min(height - b.h - 7, b.y));
+          a.y = Math.max(layoutTop + 7, Math.min(layoutHeight - a.h - 7, a.y)); b.y = Math.max(layoutTop + 7, Math.min(layoutHeight - b.h - 7, b.y));
         }
       }
     }
@@ -454,44 +470,56 @@ export function createScene(container, { onSelect } = {}) {
     if (bubbleBounds) {
       const occupied = [bubbleBounds, coreBounds].filter(Boolean);
       const priority = label => label.node.id === 'vendor' ? 0 : label.node.id === dialogueOverlay.active.nodeId ? 1 : 2;
-      [...labels].sort((a, b) => priority(a) - priority(b) || a.py - b.py).forEach(label => {
-        const desired = { x: Math.max(7, Math.min(width - label.w - 7, label.px - label.w / 2)), y: Math.max(7, Math.min(height - label.h - 7, label.py - label.h)) };
+      [...visibleLabels].sort((a, b) => priority(a) - priority(b) || a.py - b.py).forEach(label => {
+        const desired = { x: Math.max(7, Math.min(width - label.w - 7, label.px - label.w / 2)), y: Math.max(layoutTop + 7, Math.min(layoutHeight - label.h - 7, label.py - label.h)) };
         const candidates = [{ x: label.x, y: label.y }, desired];
-        for (const x of [7, (width - label.w) / 2, width - label.w - 7, desired.x]) for (let y = 7; y <= height - label.h - 7; y += label.h + 9) candidates.push({ x, y });
+        for (const x of [7, (width - label.w) / 2, width - label.w - 7, desired.x]) for (let y = layoutTop + 7; y <= layoutHeight - label.h - 7; y += label.h + 9) candidates.push({ x, y });
         const score = p => occupied.reduce((sum, obstacle) => sum + overlapArea({ ...p, w: label.w, h: label.h }, obstacle, 5) * 1000, 0) + (p.x - desired.x) ** 2 + (p.y - desired.y) ** 2;
         const best = candidates.reduce((a, b) => score(a) <= score(b) ? a : b); label.x = best.x; label.y = best.y; occupied.push({ x: best.x, y: best.y, w: label.w, h: label.h });
       });
     }
-    labels.forEach(label => {
+    visibleLabels.forEach(label => {
       label.button.style.transform = `translate3d(${label.x.toFixed(1)}px,${label.y.toFixed(1)}px,0)`;
       label.leader.setAttribute('x1', label.px); label.leader.setAttribute('y1', label.py + 7); label.leader.setAttribute('x2', label.x + label.w / 2); label.leader.setAttribute('y2', label.y + label.h);
       label.leader.style.opacity = Math.abs(label.y + label.h - label.py) > 12 ? '.6' : '.15';
     }); needsLabelLayout = false;
   }
   function resize() {
-    width = Math.max(1, container.clientWidth); height = Math.max(1, container.clientHeight); const aspect = width / height, half = Math.max(10.6, 13.8 / aspect);
-    camera.left = -half * aspect; camera.right = half * aspect; camera.top = half; camera.bottom = -half; camera.updateProjectionMatrix(); renderer.setSize(width, height, false); needsLabelLayout = true;
+    width = Math.max(1, container.clientWidth); height = Math.max(1, container.clientHeight);
+    const style = storyMode ? getComputedStyle(container) : null;
+    storyTop = storyMode ? Math.min(height * .2, Math.max(0, parseFloat(style.getPropertyValue('--story-scene-top')) || 0)) : 0;
+    storyBottom = storyMode ? Math.min(Math.max(0, height - storyTop - 160), Math.max(0, parseFloat(style.getPropertyValue('--story-scene-bottom')) || 0)) : 0;
+    const safeHeight = Math.max(1, height - storyTop - storyBottom), aspect = width / safeHeight, half = storyMode ? Math.max(9.4, 13 / aspect) : Math.max(10.6, 13.8 / aspect), units = 2 * half / safeHeight;
+    // An asymmetric frustum keeps the network centered above the dialogue dock.
+    // Its horizontal field stays wide enough to retain all supply-chain nodes.
+    camera.left = -half * aspect; camera.right = half * aspect; camera.top = half + storyTop * units; camera.bottom = -half - storyBottom * units; camera.updateProjectionMatrix(); renderer.setSize(width, height, false); needsLabelLayout = true;
   }
-  const observer = new ResizeObserver(resize); observer.observe(container); resize();
+  const observer = new ResizeObserver(resize); observer.observe(container);
+  const styleObserver = new MutationObserver(() => { if (storyMode) resize(); }); styleObserver.observe(container, { attributes: true, attributeFilter: ['style', 'class'] }); resize();
   controls.addEventListener('change', () => { needsLabelLayout = true; }); controls.addEventListener('start', () => { focusTarget = null; desiredZoom = null; });
   const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2(); let pointerStart = null;
-  function down(e) { pointerStart = { x: e.clientX, y: e.clientY }; }
+  function down(e) { pointerStart = storyMode ? null : { x: e.clientX, y: e.clientY }; }
   function up(e) {
-    if (!pointerStart || Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y) > 5) return;
+    if (storyMode || !pointerStart || Math.hypot(e.clientX - pointerStart.x, e.clientY - pointerStart.y) > 5) return;
     const bounds = renderer.domElement.getBoundingClientRect(); pointer.set((e.clientX - bounds.left) / bounds.width * 2 - 1, -(e.clientY - bounds.top) / bounds.height * 2 + 1); raycaster.setFromCamera(pointer, camera);
     const hit = raycaster.intersectObjects(pickable, false)[0]; if (hit) onSelect?.(hit.object.userData.nodeId); pointerStart = null;
   }
   renderer.domElement.addEventListener('pointerdown', down); renderer.domElement.addEventListener('pointerup', up);
 
+  function updatePeople() {
+    people.forEach((person, id) => {
+      person.active = dialogueOverlay.active?.nodeId === id || (storyMode && storyFocus === id);
+      const status = nodeStatus(id, state);
+      person.mood = dialogueOverlay.active?.nodeId === id ? dialogueOverlay.active.mood : person.active && ['incident', 'impacted'].includes(status) ? 'alert' : person.active && status === 'protected' ? 'relief' : 'calm';
+      person.surprise.visible = person.mood === 'alert'; person.smile.visible = person.mood !== 'alert'; person.marker.visible = person.active && person.mood === 'alert';
+      person.brows[0].rotation.z = person.mood === 'alert' ? -.23 : 0; person.brows[1].rotation.z = person.mood === 'alert' ? .23 : 0;
+    });
+  }
   function update(next = {}) {
     state = { ...state, ...next }; const affected = asSet(state.impacted), patched = asSet(state.patched, ['vendor']), isolated = asSet(state.isolated, ['vendor']);
     state.futureMode = Boolean(state.futureMode); state.pressure = Math.min(1, Math.max(0, Number(state.pressure) || 0));
     dialogueOverlay.update(state.dialogue);
-    people.forEach((person, id) => {
-      person.active = dialogueOverlay.active?.nodeId === id; person.mood = person.active ? dialogueOverlay.active.mood : 'calm';
-      person.surprise.visible = person.mood === 'alert'; person.smile.visible = person.mood !== 'alert'; person.marker.visible = person.active && person.mood === 'alert';
-      person.brows[0].rotation.z = person.mood === 'alert' ? -.23 : 0; person.brows[1].rotation.z = person.mood === 'alert' ? .23 : 0;
-    });
+    updatePeople();
     paintPHP(patched.has('vendor'), state.futureMode);
     const maintenanceColor = new THREE.Color(COLORS.amber);
     coreLight.color.set(COLORS.purple); if (state.futureMode) coreLight.color.lerp(maintenanceColor, state.pressure * .8);
@@ -504,7 +532,7 @@ export function createScene(container, { onSelect } = {}) {
       if (id === 'vendor') {
         label.button.querySelector('strong').textContent = state.futureMode ? '共通ソフトウェア基盤' : '委託先のPHP基盤';
         label.button.querySelector('small').textContent = state.futureMode ? '継続的な更新' : `PHP ${displayedVersion} · ${patched.has('vendor') ? '更新確認済み' : '未修正'}`;
-        label.button.setAttribute('aria-label', state.futureMode ? '共通ソフトウェア基盤、継続的な更新の詳細を表示' : '委託先のPHP基盤の詳細を表示');
+        label.button.setAttribute('aria-label', state.futureMode ? (storyMode ? '共通ソフトウェア基盤、継続的な更新' : '共通ソフトウェア基盤、継続的な更新の詳細を表示') : (storyMode ? '委託先のPHP基盤' : '委託先のPHP基盤の詳細を表示'));
       }
     });
     routes.forEach(route => {
@@ -523,8 +551,12 @@ export function createScene(container, { onSelect } = {}) {
   }
   function render(now) {
     if (disposed) return; frame = requestAnimationFrame(render); const frameTime = Number.isFinite(now) ? now : performance.now(); const dt = frameDelta(frameTime, lastTime); lastTime = frameTime; elapsed += dt;
-    if (focusTarget) { controls.target.lerp(focusTarget, .06); if (controls.target.distanceTo(focusTarget) < .02) focusTarget = null; needsLabelLayout = true; }
-    if (desiredZoom !== null) { camera.zoom += (desiredZoom - camera.zoom) * .09; camera.updateProjectionMatrix(); if (Math.abs(desiredZoom - camera.zoom) < .002) { camera.zoom = desiredZoom; desiredZoom = null; } needsLabelLayout = true; }
+    if (focusTarget) {
+      const movement = focusTarget.clone().sub(controls.target).multiplyScalar(reducedMotion ? 1 : storyMode ? Math.min(1, dt * 3) : .06);
+      controls.target.add(movement); if (storyMode) camera.position.add(movement);
+      if (controls.target.distanceTo(focusTarget) < .02) focusTarget = null; needsLabelLayout = true;
+    }
+    if (desiredZoom !== null) { camera.zoom += (desiredZoom - camera.zoom) * (reducedMotion ? 1 : .09); camera.updateProjectionMatrix(); if (Math.abs(desiredZoom - camera.zoom) < .002) { camera.zoom = desiredZoom; desiredZoom = null; } needsLabelLayout = true; }
     controls.update();
     people.forEach((person, id) => {
       const node = structures.get(id).node, p = PEOPLE[id];
@@ -546,15 +578,29 @@ export function createScene(container, { onSelect } = {}) {
   update(); particles.forEach(p => p.object.position.copy(p.curve.getPointAt(p.phase))); frame = requestAnimationFrame(render);
   return {
     update,
+    setStoryMode(enabled = true) {
+      storyMode = Boolean(enabled); container.dataset.storyScene = String(storyMode); controls.enabled = !storyMode; pointerStart = null;
+      renderer.domElement.style.touchAction = storyMode ? 'pan-y' : 'none';
+      renderer.domElement.setAttribute('aria-label', storyMode ? 'PHPの基盤と、そこにつながる会社・工場・物流・医療・暮らしの3Dシーン。' : '中央のPHPランタイムと五つの業務拠点を示す3Dネットワーク。ドラッグで回転、拠点を選択。');
+      labels.forEach(({ node, button }) => { button.disabled = storyMode; button.tabIndex = storyMode ? -1 : 0; button.setAttribute('aria-label', storyMode ? node.name : `${node.name}の詳細を表示`); });
+      if (!storyMode) storyFocus = null;
+      focusTarget = initialTarget.clone(); desiredZoom = 1; updatePeople(); resize();
+    },
+    focusStory(id = null) {
+      const nextId = structures.has(id) ? id : null; if (!storyMode || nextId === storyFocus) return; storyFocus = nextId;
+      const node = structures.get(nextId)?.node;
+      focusTarget = node ? new THREE.Vector3(node.x * .13, 1.0, node.z * .13) : initialTarget.clone();
+      desiredZoom = node ? 1.04 : 1; updatePeople(); needsLabelLayout = true;
+    },
     focus(id) { const item = structures.get(id); if (!item) return; update({ selected: id }); focusTarget = new THREE.Vector3(item.node.x * .6, 1.2, item.node.z * .6); desiredZoom = 1.4; },
     reset() { controls.autoRotate = false; camera.position.copy(initialPosition); controls.target.copy(initialTarget); camera.zoom = 1; camera.updateProjectionMatrix(); focusTarget = null; desiredZoom = null; controls.update(); needsLabelLayout = true; },
     zoom(delta) { desiredZoom = THREE.MathUtils.clamp(camera.zoom * (delta > 0 ? 1.18 : .85), controls.minZoom, controls.maxZoom); },
     setRotate(value) { controls.autoRotate = Boolean(value) && !reducedMotion; },
     dispose() {
-      disposed = true; cancelAnimationFrame(frame); observer.disconnect(); controls.dispose(); renderer.domElement.removeEventListener('pointerdown', down); renderer.domElement.removeEventListener('pointerup', up);
+      disposed = true; cancelAnimationFrame(frame); observer.disconnect(); styleObserver.disconnect(); controls.dispose(); renderer.domElement.removeEventListener('pointerdown', down); renderer.domElement.removeEventListener('pointerup', up);
       const geometries = new Set(), materials = new Set(), textures = new Set([glowTexture, phpTexture]);
       scene.traverse(o => { if (o.geometry) geometries.add(o.geometry); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => materials.add(m)); });
-      geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose()); dialogueOverlay.dispose(); renderer.dispose(); renderer.domElement.remove(); labelsRoot.remove();
+      geometries.forEach(g => g.dispose()); materials.forEach(m => m.dispose()); textures.forEach(t => t.dispose()); dialogueOverlay.dispose(); renderer.dispose(); renderer.domElement.remove(); labelsRoot.remove(); delete container.dataset.storyScene;
     },
   };
 }
