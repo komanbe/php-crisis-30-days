@@ -101,16 +101,71 @@ test('restored systems retain past business harms, and alternatives reduce those
 });
 
 test('the future starts patched and models workload rather than forced intrusion', () => {
+  assert.equal(STORIES.find((story) => story.id === 'updates').role, '情シスリーダー');
   for (const { frames, state, ending } of allPaths('updates')) {
     assert.ok(frames.every((frame) => frame.scene.patched && frame.scene.futureMode));
     assert.match(ending.summary, /更新の通知は届き続け/);
     assert.match(ending.summary, /作業をいつ進めるか、誰が担うか、いつ知らせるか/);
     assert.ok(!frames.some((frame) => /侵害されました|侵入されました|漏えいしました/.test(frame.text)));
+    assert.ok(frames.every((frame) => !/社長|社長室/.test(`${frame.text} ${frame.context} ${frame.eyebrow}`)));
     const vendor = ending.impacts.find((item) => item.nodeId === 'vendor');
     assert.equal(vendor.status, state.flags.scheduled && state.flags.sharedTeam ? 'burden' : 'affected');
     const retail = ending.impacts.find((item) => item.nodeId === 'retail');
     if (state.flags.scheduled && state.flags.transparent) assert.equal(retail.status, 'protected');
     if (!state.flags.scheduled && !state.flags.transparent) assert.equal(retail.status, 'affected');
+  }
+});
+
+test('the researcher hears the client and agrees a separated scope before reviewing a known vulnerability', () => {
+  for (const { frames } of allPaths('researcher')) {
+    assert.match(frames[0].text, /何に困っているのかを聞/);
+    assert.match(frames[1].text, /工場に注文を渡せません/);
+    assert.match(frames[2].text, /本番とは分離/);
+    assert.match(frames[2].text, /ダミーデータ/);
+    assert.match(frames[2].text, /合意しています/);
+    assert.match(frames[2].context, /本番への攻撃や、範囲外の調査は行わない/);
+    assert.ok(frames.findIndex((frame) => frame.id === 'researcher-scope') < frames.findIndex((frame) => frame.id === 'researcher-php'));
+    const phpFrame = frames.find((frame) => frame.id === 'researcher-php');
+    assert.match(phpFrame.text, /公表されている PHP2Shell/);
+    assert.match(phpFrame.php.before, /8\.3\.35.*mod_php/);
+    assert.match(phpFrame.php.after, /8\.3\.36/);
+    assert.match(frames.find((frame) => frame.id === 'researcher-verification').context, /新しい脆弱性の発見や、本番の侵害を示す結果ではない/);
+    assert.match(frames.find((frame) => frame.id === 'researcher-report').context, /環境の詳細を公開せず/);
+    assert.ok(frames.every((frame) => frame.scene.futureMode && !frame.scene.prevented && !frame.scene.isolated));
+    assert.ok(frames.every((frame) => !/侵入されました|侵害されました|攻撃を実行|新しい脆弱性を発見/.test(frame.text)));
+  }
+});
+
+test('researcher choices change coordination burdens and retain unverified handoff results', () => {
+  const paths = allPaths('researcher');
+  const findPath = (heardField, impactReport, verifiedTogether) => paths.find(({ state }) =>
+    state.flags.heardField === heardField && state.flags.impactReport === impactReport && state.flags.verifiedTogether === verifiedTogether);
+  for (const { frames, state, ending } of paths) {
+    assert.ok(frames.filter((frame) => frame.day < 5).every((frame) => !frame.scene.patched));
+    const patch = frames.find((frame) => frame.id === 'researcher-patch');
+    assert.equal(patch.scene.patched, state.flags.verifiedTogether);
+    assert.equal(frames.at(-1).scene.patched, state.flags.verifiedTogether);
+    const vendor = ending.impacts.find((item) => item.nodeId === 'vendor');
+    assert.equal(vendor.status, 'burden', 'Completing verification does not erase the operators’ work.');
+    if (state.flags.verifiedTogether) {
+      assert.match(patch.text, /更新と再起動の記録/);
+      assert.match(patch.text, /受付担当にも注文の動作を確認/);
+      assert.match(vendor.text, /環境全体の安全を保証するものではない/);
+    } else {
+      assert.match(patch.context, /本番の修正反映と受付の動作は、運用担当からの報告待ち/);
+      assert.match(ending.decisions[2].result, /本番の完了確認は報告待ち/);
+      assert.match(vendor.text, /未確認として区別/);
+      assert.match(frames.find((frame) => frame.id === 'researcher-closing').context, /本番の完了確認が未確認/);
+    }
+    assert.equal(ending.impacts.find((item) => item.nodeId === 'factory').status,
+      state.flags.heardField && state.flags.impactReport ? 'protected' : 'burden');
+    assert.equal(ending.impacts.find((item) => item.nodeId === 'retail').status,
+      state.flags.impactReport && state.flags.verifiedTogether ? 'protected' : 'burden');
+  }
+  // Each decision changes the people’s account, independently of the history list.
+  const complete = findPath(true, true, true);
+  for (const other of [findPath(false, true, true), findPath(true, false, true), findPath(true, true, false)]) {
+    assert.notDeepEqual(other.ending.impacts, complete.ending.impacts);
   }
 });
 

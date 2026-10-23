@@ -487,7 +487,8 @@ export function createScene(container, { onSelect } = {}) {
   function resize() {
     width = Math.max(1, container.clientWidth); height = Math.max(1, container.clientHeight);
     const style = storyMode ? getComputedStyle(container) : null;
-    storyTop = storyMode ? Math.min(height * .2, Math.max(0, parseFloat(style.getPropertyValue('--story-scene-top')) || 0)) : 0;
+    // The heading can wrap on mobile; reserve its measured height before labels.
+    storyTop = storyMode ? Math.min(Math.max(0, height - 160), Math.max(0, parseFloat(style.getPropertyValue('--story-scene-top')) || 0)) : 0;
     storyBottom = storyMode ? Math.min(Math.max(0, height - storyTop - 160), Math.max(0, parseFloat(style.getPropertyValue('--story-scene-bottom')) || 0)) : 0;
     const safeHeight = Math.max(1, height - storyTop - storyBottom), aspect = width / safeHeight, half = storyMode ? Math.max(9.4, 13 / aspect) : Math.max(10.6, 13.8 / aspect), units = 2 * half / safeHeight;
     // An asymmetric frustum keeps the network centered above the dialogue dock.

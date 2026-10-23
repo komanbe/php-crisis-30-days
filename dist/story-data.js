@@ -14,9 +14,15 @@ export const STORIES = Object.freeze([
   }),
   Object.freeze({
     id: 'updates', number: '02', title: '更新が、終わらない世界',
-    subtitle: '一度直した、その先の 180 日間。', role: '同じ会社の社長',
+    subtitle: '一度直した、その先の 180 日間。', role: '情シスリーダー',
     duration: '約 5 分',
-    description: 'PHP は更新した。でも次の通知は届く。担当者と現場を守りながら、変化に追いつく会社をつくれるか。'
+    description: 'PHP は更新した。でも次の通知は届く。情シスチームを率い、担当者と現場を守りながら、保守を続けられるか。'
+  }),
+  Object.freeze({
+    id: 'researcher', number: '03', title: '最初の仕事は、話を聞くこと。',
+    subtitle: '「調べてほしい」の、その先へ。', role: 'ホワイトハッカー',
+    duration: '約 5 分',
+    description: '依頼者の困りごとを聞き、合意した範囲で PHP2Shell を調べる。報告書を渡した、その先まで。現場につながる診断ができるか。'
   })
 ]);
 
@@ -33,6 +39,12 @@ const FLOWS = Object.freeze({
     'updates-cadence-reaction', 'updates-factory', 'updates-team', 'updates-team-reaction',
     'updates-delivery', 'updates-communication', 'updates-procurement', 'updates-pressure',
     'updates-handoff', 'updates-customer', 'updates-lesson', 'updates-ending'
+  ]),
+  researcher: Object.freeze([
+    'researcher-opening', 'researcher-problem', 'researcher-scope', 'researcher-interview',
+    'researcher-interview-reaction', 'researcher-php', 'researcher-verification', 'researcher-report',
+    'researcher-report-reaction', 'researcher-delivery', 'researcher-followthrough', 'researcher-patch',
+    'researcher-procurement', 'researcher-customer', 'researcher-closing', 'researcher-ending'
   ])
 });
 
@@ -77,6 +89,27 @@ const DECISIONS = Object.freeze({
     choices: [
       { id: 'share', label: '予定と代わりの手段を知らせる', description: '工場・配送・利用者に、使えない時間と次の連絡を共有する。', value: true, result: '保守予定と代替手段を、関係する人へ共有した。' },
       { id: 'silent', label: '問い合わせが来たら答える', description: 'まず更新作業に集中し、連絡は個別の問い合わせに対応する。', value: false, result: '事前の一斉共有をせず、個別の問い合わせに対応した。' }
+    ]
+  },
+  'researcher-interview': {
+    flag: 'heardField', label: '現場の仕事を知る',
+    choices: [
+      { id: 'listen', label: '現場の担当にも話を聞く', description: '時間を取り、受注・製造・配送で困る時間帯と代替手段を確かめる。', value: true, result: '現場にもヒアリングし、止めにくい時間と代替手段を確認した。' },
+      { id: 'documents', label: '資料を中心に調査を始める', description: '依頼者から受け取った資料で進め、現場の未確認事項は報告に残す。', value: false, result: '資料で調査を先に進め、現場に追加確認が必要な事項を残した。' }
+    ]
+  },
+  'researcher-report': {
+    flag: 'impactReport', label: '非公開の報告を届ける',
+    choices: [
+      { id: 'business', label: '業務への影響と優先順位も伝える', description: '技術の確認結果に、止まる仕事と調整事項を添えて依頼者・運用担当へ説明する。', value: true, result: '技術の確認結果と業務への影響をまとめ、優先順位を相談した。' },
+      { id: 'technical', label: '技術の報告を先に渡す', description: '確認済みの構成と修正方法を先に共有し、業務の調整は依頼者に引き継ぐ。', value: false, result: '技術の報告を先に渡し、業務への影響と調整は依頼者へ引き継いだ。' }
+    ]
+  },
+  'researcher-followthrough': {
+    flag: 'verifiedTogether', label: '修正後の確認を引き継ぐ',
+    choices: [
+      { id: 'accompany', label: '運用担当と、修正確認まで伴走する', description: '合意した時間を取り、運用担当の更新・再起動と受付の確認結果を一緒に確かめる。', value: true, result: '運用担当と、更新・再起動・受付の確認結果まで確かめた。' },
+      { id: 'handoff', label: '確認手順を渡し、運用へ引き継ぐ', description: '担当者・確認項目・返答先をそろえて渡す。自分が確認できた範囲も明記する。', value: false, result: '確認手順と返答先をそろえて運用へ引き継ぎ、本番の完了確認は報告待ちとして残した。' }
     ]
   }
 });
@@ -168,15 +201,38 @@ function updateScene(day, flags, selected) {
   };
 }
 
+function researcherScene(day, flags, selected) {
+  // The amber state denotes coordination work, never a simulated intrusion.
+  // "patched" means the production completion evidence was jointly checked.
+  const fieldPending = flags.heardField === false;
+  const businessPending = flags.impactReport === false;
+  const completionPending = flags.verifiedTogether === false;
+  const impacted = [
+    ...(fieldPending && day >= 1 ? ['factory'] : []),
+    ...(businessPending && day >= 3 ? ['hq', 'logistics'] : []),
+    ...(completionPending && day >= 5 ? ['vendor'] : []),
+    ...((businessPending || completionPending) && day >= 7 ? ['hospital', 'retail'] : [])
+  ];
+  return {
+    day, impacted, patched: flags.verifiedTogether === true && day >= 5,
+    prevented: false, isolated: false, futureMode: true,
+    pressure: .12 + (fieldPending ? .15 : 0) + (businessPending ? .2 : 0) + (completionPending ? .15 : 0),
+    selected: selected || 'vendor'
+  };
+}
+
 function frame(state, values) {
   const flags = state.flags;
   return {
-    id: state.nodeId, kind: 'scene', eyebrow: '受発注会社・社長室',
+    id: state.nodeId, kind: 'scene',
+    eyebrow: state.storyId === 'crisis' ? '受発注会社・社長室'
+      : state.storyId === 'updates' ? '受発注会社・情シスチーム' : 'セキュリティ診断・依頼者との打ち合わせ',
     mood: 'calm', nextLabel: 'つづける', context: '',
     ...values,
     scene: state.storyId === 'crisis'
       ? crisisScene(values.day, flags, values.speaker, values.day === 180)
-      : updateScene(values.day, flags, values.speaker)
+      : state.storyId === 'updates' ? updateScene(values.day, flags, values.speaker)
+        : researcherScene(values.day, flags, values.speaker)
   };
 }
 
@@ -295,6 +351,57 @@ function updatesEnding(state) {
   };
 }
 
+function researcherEnding(state) {
+  const { heardField, impactReport, verifiedTogether } = state.flags;
+  return {
+    title: verifiedTogether ? (heardField && impactReport ? '直した、その先まで確かめた。' : '修正は確かめた。現場への説明は続く。')
+      : heardField && impactReport ? '次の担当へ、確かめる道を渡した。' : '技術の報告に、現場の宿題が残った。',
+    summary: '調べる前に、困っている仕事を聞く。確認したことを、直す人へ届ける。今回の診断では PHP2Shell の対象構成を確認し、修正と確認の仕事を運用担当につなぎました。誰の確認と調整が残ったかを、報告書の先までたどります。',
+    impacts: [
+      impact('vendor', 'burden', verifiedTogether ? '修正の確認まで、一緒に進めた' : '確認手順と、返す報告を受け取った', verifiedTogether
+        ? '運用担当が更新と再起動を行い、受付の確認結果を診断担当と照合した。作業時間と記録を残す負担はかかった。確認したのは対象の修正と受付の動作で、環境全体の安全を保証するものではない。'
+        : '更新・再起動・受付確認の手順と返答先を受け取った。本番の作業と完了報告は運用側に残り、診断担当の報告では未確認として区別された。', verifiedTogether
+        ? '記録を一緒に見てもらえて、何をもって完了とするかそろえられました。'
+        : '担当と確認項目は分かりました。作業を終えたら、記録と一緒に返します。'),
+      impact('hq', heardField && impactReport ? 'protected' : 'burden', impactReport ? '技術の話を、受付の段取りにつなげた' : '技術の報告を、受付の言葉に直した', impactReport
+        ? (heardField ? 'ヒアリングした締め時刻と代替受付を、更新の調整に使えた。受注担当が守りたい時間を、運用担当と共有できた。' : '業務への影響も報告に入った。資料では分からなかった締め時刻と代替受付は、受注担当が追加で確かめた。')
+        : '修正方法は早く届いた。一方、何時に止められるか、電話受付を誰が担うかは、受注担当が読み替えて相談する必要があった。', impactReport
+        ? '何を直すかだけじゃなく、受付をどうつなぐかまで相談できました。'
+        : 'この報告を、今日の受付ではどう動けばいいかに直しているところです。'),
+      impact('factory', heardField && impactReport ? 'protected' : 'burden', heardField ? '製造指示を受け取る時間が伝わった' : '資料にない締め時刻を、あとから補った', heardField
+        ? (impactReport ? '現場で伝えた製造指示の締め時刻が、保守の調整事項に入った。直す側と同じ時刻を見て準備できた。' : 'ヒアリングで締め時刻は伝えた。技術報告を先に渡したため、保守の段取りへ反映する連絡は社内で続けた。')
+        : '構成資料だけでは製造指示の締め時刻が分からず、報告後に確認の連絡が来た。打ち合わせを追加し、現場の予定を説明した。', heardField
+        ? 'この時間に注文が見えないと困る。それを最初に聞いてもらえたのがよかった。'
+        : 'システムの図には載らないけど、うちには注文を締める時間があるんです。'),
+      impact('logistics', heardField && impactReport ? 'protected' : 'burden', impactReport ? '更新の話が、出発の準備に届いた' : '配送への影響を、別に確認した', impactReport
+        ? (heardField ? 'ヒアリングした出発前の確認をもとに、保守中に必要な出荷情報を準備できた。' : '業務への影響は共有されたが、出発前に何を確認するかは配送担当が追加で調整した。')
+        : '技術の修正方法だけでは配送の変更点が分からず、出発前に必要な情報と確認先を別に相談した。', impactReport
+        ? '出発前に何をそろえるか、運用の人と話が通じました。'
+        : '更新するのは分かりました。出発の準備は、いつもどおりでいいですか？'),
+      impact('hospital', impactReport && verifiedTogether ? 'protected' : 'burden', verifiedTogether ? '確認できた受付の状態を聞けた' : '作業の完了連絡を待った', verifiedTogether
+        ? (impactReport ? '調達に使う受付の動作確認と保守の連絡がそろい、発注の予定を立てられた。' : '受付の確認は終わったが、調達窓口への説明は別途必要だった。状況を尋ねる連絡が一往復増えた。')
+        : '手順が運用担当に引き継がれ、調達窓口では完了の連絡を待った。発注の前に確認する手間と、予定を確定できない時間が残った。', verifiedTogether && impactReport
+        ? '受付まで確認できたと聞けたので、こちらの発注も準備できます。'
+        : '手順が渡ったことは分かりました。作業が終わったら、こちらにも教えてください。'),
+      impact('retail', impactReport && verifiedTogether ? 'protected' : 'burden', verifiedTogether ? '「使える」の確認を受け取った' : '確認済みと、確認待ちが分かれた', verifiedTogether
+        ? (impactReport ? '更新後の注文受付を確かめたうえで案内が届いた。技術の修正が、使えるかどうかの返答につながった。' : '注文受付の確認は済んだが、利用者向けの案内には社内で補足が必要だった。利用者は連絡を探す手間を負った。')
+        : '診断担当の報告は手順の引き継ぎまで。利用者への完了案内は運用の確認待ちとなり、いつ注文できるかを問い合わせる手間が残った。', verifiedTogether && impactReport
+        ? '注文まで確かめた、と聞けると助かります。使う側が知りたいのはそこなんです。'
+        : '直し方が決まったんですね。使えるようになったら、知らせてもらえますか？')
+    ],
+    chain: [
+      { nodeId: 'vendor', label: '診断と運用', detail: verifiedTogether ? '修正・再起動の記録を一緒に確認' : '確認手順と担当を引き継ぐ' },
+      { nodeId: 'hq', label: '受注担当', detail: impactReport ? '業務への影響と優先順位を共有' : '技術報告を受付の段取りへ読み替える' },
+      { nodeId: 'factory', label: '工場', detail: heardField ? '製造指示の締め時刻を事前に伝える' : '資料にない締め時刻を追加確認' },
+      { nodeId: 'logistics', label: '配送', detail: impactReport ? '保守中に必要な出荷情報を相談' : '配送への影響を別に確認' },
+      { nodeId: 'hospital', label: '病院の調達', detail: verifiedTogether ? '確認できた受付の状態を伝える' : '運用担当から完了の連絡を待つ' },
+      { nodeId: 'retail', label: '利用者', detail: impactReport && verifiedTogether ? '受付の確認を案内につなげる' : '使える時刻の案内を待つ' }
+    ],
+    lesson: '診断の最初の材料は、依頼者が守りたい仕事。合意した範囲で調べ、確認した事実と未確認を分けて報告し、修正する担当と確かめ方をそろえる。その先には、いつもの受付を使いたい人がいます。',
+    decisions: decisionHistory(state)
+  };
+}
+
 function crisisFrame(state) {
   const { updatedEarly: early, alternate, transparent } = state.flags;
   switch (state.nodeId) {
@@ -398,8 +505,8 @@ function updatesFrame(state) {
   switch (state.nodeId) {
     case 'updates-opening': return frame(state, {
       chapter: 'PROLOGUE', day: 0, time: '新しい朝', title: 'アップデートは、終わったはずだった。', speaker: null,
-      text: 'PHP2Shell への更新は終えた。受付も、工場も動いている。ようやく一息つける。そう思った朝、ミオが次の保守予定を持って社長室に入ってきた。',
-      context: '朝の社長室。今日の議題は、これからの保守体制。', nextLabel: '情シスの話を聞く'
+      text: 'PHP2Shell への更新は終えた。受付も、工場も動いている。情シスリーダーのあなたが一息つこうとした朝、ミオが次の保守予定を持って打ち合わせに来た。',
+      context: '朝の情シスミーティング。今日の議題は、これからの保守体制。', nextLabel: '担当者の話を聞く'
     });
     case 'updates-php': return frame(state, {
       chapter: 'CHAPTER 01', day: 0, time: '09:00', title: 'まず、PHP のおさらいから。', speaker: 'vendor', mood: 'relief',
@@ -430,7 +537,7 @@ function updatesFrame(state) {
     });
     case 'updates-team': return choiceFrame(state, {
       chapter: 'DECISION 2 / 3', day: 60, time: '15:00', title: '「あの人しか分からない」を、どうする？', speaker: 'hq',
-      text: '確認がミオさんに集まっています。もう一人に教えて手順を残すと、今は時間がかかります。でも、休んだ時も続けられるようにしたい。社長、どうしましょう。',
+      text: '確認がミオさんに集まっています。もう一人に教えて手順を残すと、今は時間がかかります。でも、休んだ時も続けられるようにしたい。チームの時間、どこまで取れそうですか？',
       context: '受信トレイの宛先は、今日もミオに集中している。'
     });
     case 'updates-team-reaction': return frame(state, {
@@ -479,7 +586,7 @@ function updatesFrame(state) {
     case 'updates-lesson': return frame(state, {
       chapter: 'EPILOGUE', day: 180, time: '半年後', title: '守るのは、ソフトウェアの先にある日常。', speaker: 'vendor',
       text: '半年たっても、保守の通知は来ますね。PHP の更新だけじゃなく、試験も、引き継ぎも、連絡も必要でした。次の担当者には、ソフトの設定だけじゃなくて、誰がその先で待っているかも伝えたいです。',
-      context: '半年前と同じ社長室。机の上には、現場と利用者から届いた報告がある。', nextLabel: '180 日後の、みんなの声を聞く'
+      context: '半年前と同じ打ち合わせ室。机の上には、現場と利用者から届いた報告がある。', nextLabel: '180 日後の、みんなの声を聞く'
     });
     case 'updates-ending': return frame(state, {
       kind: 'ending', chapter: 'YOUR ENDING', day: 180, time: '振り返り', title: '更新を続けた会社。その先にいる人。', speaker: null,
@@ -490,9 +597,111 @@ function updatesFrame(state) {
   }
 }
 
+function researcherFrame(state) {
+  const { heardField, impactReport, verifiedTogether } = state.flags;
+  switch (state.nodeId) {
+    case 'researcher-opening': return frame(state, {
+      chapter: 'PROLOGUE', day: 0, time: '09:00', title: '最初に開くのは、会話だった。', speaker: null,
+      text: '「うちの受付も危ないんでしょうか」。届いたのは、受発注会社からの相談だった。あなたは依頼を受けたセキュリティ診断担当。最初の打ち合わせで、ノートを開く。まず、何に困っているのかを聞こう。',
+      context: '依頼者と運用担当が席に着いた。まだ、調査は始めていない。', nextLabel: '依頼者の話を聞く'
+    });
+    case 'researcher-problem': return frame(state, {
+      chapter: 'CHAPTER 01', day: 0, time: '09:05', title: '守りたいのは、注文が届く日常。', speaker: 'hq',
+      text: 'PHP のニュースを見て、委託先の受付が気になったんです。ただ、急に止めると工場に注文を渡せません。配送も待つことになります。何が必要か調べて、仕事を続けながら直す方法を相談したいです。',
+      context: '依頼者の困りごとは「安全かどうか」だけではない。注文を受け、つくり、届ける仕事を守りたい。'
+    });
+    case 'researcher-scope': return frame(state, {
+      chapter: 'CHAPTER 01', day: 0, time: '09:20', title: 'どこまで調べるか、先にそろえる。', speaker: 'vendor',
+      text: '対象は、こちらで用意した受発注の検証環境です。本番とは分離して、注文もダミーデータにしました。構成資料と記録の確認、この環境での検証までで合意しています。本番の操作は運用担当が行います。',
+      context: '対象・方法・連絡先・中止時の連絡を合意した。本番への攻撃や、範囲外の調査は行わない。'
+    });
+    case 'researcher-interview': return choiceFrame(state, {
+      chapter: 'DECISION 1 / 3', day: 0, time: '09:35', title: '図に載らない仕事を、聞きに行く？', speaker: 'hq',
+      text: '構成図と運用の資料はそろえました。工場や配送の担当にも時間を取ってもらえますが、今日は忙しくて、調査の開始は少し後ろになります。現場の話も先に聞きますか？',
+      context: '依頼者の要望と調査範囲は確認できた。現場の細かな段取りを、どこまで先に集めるか。'
+    });
+    case 'researcher-interview-reaction': return frame(state, {
+      chapter: 'CHAPTER 02', day: 1, time: '10:00', title: heardField ? '「この時間だけは」が、見えてきた。' : '資料から先へ。聞けていないことも残す。', speaker: heardField ? 'factory' : 'vendor',
+      text: heardField ? '朝の締めまでに注文が見えれば、製造は準備できます。その後の短い保守なら調整できますよ。急ぎの注文は電話で受けているので、その担当も一緒に確認しておきましょう。'
+        : '資料を使って、先に構成を確認しましょう。製造指示の締め時刻や、電話受付の担当までは載っていませんね。そこは未確認として残して、あとで現場に確かめます。',
+      context: heardField ? 'ヒアリングに時間を使い、製造指示の締め時刻と代替受付の担当を確認した。' : '技術の確認は先に進む。現場の時間帯と代替手段は、追加確認の一覧に入った。'
+    });
+    case 'researcher-php': return frame(state, {
+      chapter: 'CHAPTER 02', day: 1, time: '13:00', title: 'PHP2Shell。まず、既知の情報と照らす。', speaker: 'vendor',
+      text: 'PHP は、注文を受け取る Web 受付の裏側です。提供した構成は PHP 8.3.35 と Apache mod_php。公表されている PHP2Shell の注意喚起と照らすと対象です。修正版の 8.3.36 への更新を進めたいです。',
+      context: '既知の脆弱性と構成の照合。対象であることと、すでに侵入されたことは別の確認になる。',
+      php: { ...PHP, label: '合意した範囲で確認する PHP 環境' }
+    });
+    case 'researcher-verification': return frame(state, {
+      chapter: 'CHAPTER 02', day: 2, time: '11:10', title: '確認したことを、混ぜずに残す。', speaker: 'vendor',
+      text: '分離した検証環境でも、資料と同じ構成を確認できました。ダミーの注文で、更新前後に確認する受付の動作も整理できています。対象の構成、修正方法、まだ確認していない範囲を分けて記録しましょう。',
+      context: '診断メモに対象の構成と確認結果を記録した。新しい脆弱性の発見や、本番の侵害を示す結果ではない。',
+      php: { ...PHP, label: '分離した検証環境・ダミー注文で確認' }
+    });
+    case 'researcher-report': return choiceFrame(state, {
+      chapter: 'DECISION 2 / 3', day: 2, time: '15:00', title: '報告を、動ける人の手に渡す。', speaker: 'vendor',
+      text: '技術の確認結果はそろいました。まず依頼者と運用担当だけに共有します。業務への影響と優先順位も一緒に説明しますか？ それとも、技術の報告を先に渡して、社内で調整を進めてもらいますか？',
+      context: '報告先は合意した依頼者と運用担当。環境の詳細を公開せず、指定の共有先でやり取りする。'
+    });
+    case 'researcher-report-reaction': return frame(state, {
+      chapter: 'CHAPTER 03', day: 3, time: '09:30', title: impactReport ? '「直す」が、仕事の予定に変わった。' : '修正方法は届いた。段取りは、これから。', speaker: 'hq', mood: impactReport ? 'relief' : 'calm',
+      text: impactReport ? (heardField ? '修正が必要な理由と、受付を止める時間の相談が一つになっていて助かります。聞いてもらった締め時刻を使って、工場と予定を合わせます。'
+        : '業務への影響も整理してもらえたので、誰に確認するか分かりました。資料にない締め時刻と電話受付の担当を、これから現場に聞きます。')
+        : '修正方法は先に受け取れました。ありがとうございます。次は、受付をいつ止められるか、代わりの電話を誰が取るかですね。技術の報告を見ながら、こちらで調整します。',
+      context: impactReport ? '非公開の報告会で、修正の優先順位と、作業前にそろえる連絡を確認した。' : '技術の報告は共有済み。依頼者が、現場への説明と保守の調整を引き受けた。'
+    });
+    case 'researcher-delivery': return frame(state, {
+      chapter: 'CHAPTER 03', day: 3, time: '16:20', title: '報告書の先には、出発時刻がある。', speaker: 'logistics',
+      text: impactReport && heardField ? '出発前に必要な情報を、先に聞いてもらえてよかったです。保守に合わせて、出荷の一覧を確認しておきます。'
+        : impactReport ? '業務への影響の一覧、届きました。出発前にどの出荷情報を用意するか、もう少し確認させてください。'
+          : 'PHP を直すのは分かりました。配送の準備はいつもどおりで大丈夫ですか？ 何時に一覧が見られるか、そこを先に知りたいです。',
+      context: '配送担当が必要なのは、調査の詳しい手法より、出発までに確認できる情報だった。'
+    });
+    case 'researcher-followthrough': return choiceFrame(state, {
+      chapter: 'DECISION 3 / 3', day: 4, time: '14:00', title: '報告の後、どこまで一緒に確かめる？', speaker: 'vendor',
+      text: '更新は運用担当が行います。再起動、PHP の修正の反映、受付の動作まで確認する予定です。合意した時間で結果を一緒に見てもらうか、手順を受け取ってこちらで確認し、報告する形にできます。',
+      context: '作業する担当と戻し方は決まった。診断担当が確認する範囲と、引き継ぐ範囲をそろえる。'
+    });
+    case 'researcher-patch': return frame(state, {
+      chapter: 'CHAPTER 04', day: 5, time: '17:30', title: verifiedTogether ? '更新した。その記録まで、確かめる。' : '「お願いします」に、確認項目を添える。', speaker: 'vendor', mood: verifiedTogether ? 'relief' : 'calm',
+      text: verifiedTogether ? '運用担当から更新と再起動の記録が届きました。対象の修正は反映されています。受付担当にも注文の動作を確認してもらいました。ここまでを、完了した項目として一緒に記録します。'
+        : '検証環境で確認した手順を、運用担当に渡しました。本番の更新と再起動、それから受付の確認ですね。担当者と報告先もそろっています。作業を終えたら、記録を返してもらいます。',
+      context: verifiedTogether ? '合意した範囲の修正と受付の動作を確認した。ほかの問題まで確認したことにはしない。' : '手順の引き継ぎは完了。本番の修正反映と受付の動作は、運用担当からの報告待ち。',
+      php: { ...PHP, label: verifiedTogether ? '運用担当の記録と受付の動作を確認' : '本番の完了確認は運用からの報告待ち' }
+    });
+    case 'researcher-procurement': return frame(state, {
+      chapter: 'CHAPTER 04', day: 7, time: '10:15', title: '調達窓口にも、返答が必要だった。', speaker: 'hospital', mood: impactReport && verifiedTogether ? 'relief' : 'calm',
+      text: impactReport && verifiedTogether ? '保守と受付の確認が終わったと聞きました。発注の準備を進められます。こちらが知りたいことまで、運用の人に伝えてもらえて助かりました。'
+        : verifiedTogether ? '受付の確認は済んだんですね。こちらにはまだ案内がなかったので、問い合わせてしまいました。調達窓口にも、同じ連絡をお願いします。'
+          : '確認の手順を運用の方に渡したところなんですね。発注の前に、作業が終わったか確かめたいです。完了の連絡は、こちらにもお願いします。',
+      context: verifiedTogether ? '技術の確認結果を、病院の調達担当が使える連絡につなげる。' : '確認の担当は決まっている。調達窓口は、その完了報告を待っている。'
+    });
+    case 'researcher-customer': return frame(state, {
+      chapter: 'EPILOGUE', day: 7, time: '18:00', title: '利用者が待っていたのは、使えるという返事。', speaker: 'retail', mood: impactReport && verifiedTogether ? 'relief' : 'calm',
+      text: impactReport && verifiedTogether ? '注文まで確認できた、と案内が来ました。専門的なことは分からないですけど、使っていいかが分かると助かります。'
+        : verifiedTogether ? '更新したという話を見ました。受付も確認できているなら、いつもどおり使っていいんですよね？ その案内があると、迷わずに済むんですが。'
+          : '直し方は決まったんですね。私は使えるようになったかを知りたいので、確認が終わったら知らせてください。',
+      context: '診断の結果は、運用担当と依頼者を通じて、利用する人への案内になる。'
+    });
+    case 'researcher-closing': return frame(state, {
+      chapter: 'EPILOGUE', day: 14, time: '最終報告', title: '見つけたことを、守れる仕事につなぐ。', speaker: 'vendor',
+      text: verifiedTogether ? '相談したときは「PHP が心配」だけでした。何を守りたいかを整理して、対象の確認から更新後の受付まで、一緒に確かめられました。次の保守にも、この記録を使います。'
+        : '対象の構成と修正方法、それから運用で確かめる手順がそろいました。診断で確認済みの範囲と、本番の完了報告を待つ範囲も分けてもらえたので、次に誰が何をするか分かります。',
+      context: verifiedTogether ? '報告書に、確認した対象・修正・受付の動作と、調査範囲の外に残る事項を記した。' : '報告書には、運用へ渡した手順と担当、本番の完了確認が未確認であることを記した。', nextLabel: '報告書の先にいる人を見る'
+    });
+    case 'researcher-ending': return frame(state, {
+      kind: 'ending', chapter: 'YOUR ENDING', day: 14, time: '振り返り', title: '話を聞いた、その先で。', speaker: null,
+      text: '調査したこと、伝えたこと、次の人に託したこと。診断の記録の先には、仕事を続ける 6 人の姿があった。',
+      context: '非公開の報告を閉じる前に、確認と調整を引き受けた人たちの声を聞く。', ending: researcherEnding(state)
+    });
+    default: throw new RangeError('Unknown researcher frame.');
+  }
+}
+
 export function getFrame(state) {
   validateState(state);
-  return state.storyId === 'crisis' ? crisisFrame(state) : updatesFrame(state);
+  return state.storyId === 'crisis' ? crisisFrame(state)
+    : state.storyId === 'updates' ? updatesFrame(state) : researcherFrame(state);
 }
 
 /** Return a new state; conversations require no action, decisions require an ID. */
