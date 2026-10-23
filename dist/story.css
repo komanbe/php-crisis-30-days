@@ -32,3 +32,133 @@ body[data-screen=ending] #world{inset:0;opacity:.13;filter:blur(3px)}body[data-s
 body[data-screen=playing] #world{inset:0;height:auto;min-height:0;max-height:none}body[data-screen=playing] #scene{--story-scene-top:170px}.avatar svg{display:block;width:100%;height:100%;max-width:none}.avatar:has(svg){background:color-mix(in srgb,var(--person) 18%,#151522)}#begin:after,.next-button:after,.story-card-footer:after{display:none}#begin>span{font-size:12px}.next-button>span{font-size:18px;line-height:1}.story-card-footer small{font-size:9px}.story-card-footer b{font-size:10px;font-weight:500;color:var(--card-accent)}.scene-stamp>span,.scene-stamp>small{display:block}.scene-stamp>small{font-size:8px;margin-top:5px;color:#7f758c}.dialogue-actions>.chapter-dots{margin-right:auto}.story-choice>span:first-of-type>b{display:block;font-size:13px;line-height:1.65;font-weight:600;margin-bottom:5px;color:var(--ink)}.story-choice>span:first-of-type>span{display:block;font-size:10px;line-height:1.85;color:#bcb3bf}.story-choice>span[aria-hidden]{position:absolute;right:13px;top:15px;color:#bbadca;font-size:16px}.story-choice{padding-right:30px}.impact-person{gap:10px}.impact-person>.impact-status{margin:0 0 0 auto;font-size:8px;white-space:nowrap;padding:3px 7px}.impact-card h3{margin-top:18px}.ending-fiction .text-button{display:inline;font-size:inherit;color:var(--gold);padding:0 5px}#story-root h1:focus{outline:none}.modal-body details{border-bottom:1px solid var(--line);padding:12px 0}.modal-body details summary{cursor:pointer;color:#ddd1eb}.modal-body details p{margin-top:12px}.modal-body>.primary{margin-top:24px;font-size:12px;min-height:48px}
 @media(max-width:680px){body[data-screen=playing] #scene{--story-scene-top:175px}.story-choice>span:first-of-type>b{font-size:12px;line-height:1.6;margin-bottom:3px}.story-choice>span:first-of-type>span{font-size:10px;line-height:1.7}.story-card-footer b{font-size:9px}.story-card-footer small{font-size:8px}.impact-person>.impact-status{font-size:8px}.scene-stamp>small{font-size:7px;margin-top:3px}.story-choice>span[aria-hidden]{right:10px;top:12px;font-size:14px}}
 @media(max-width:680px){.play-screen:has(.story-choices) .dialogue-dock{padding-top:120px}}
+
+/* Before the first scene: a quiet, three-part mission briefing. */
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+body[data-screen=tutorial] #world{inset:0;height:auto;min-height:0;max-height:none;opacity:.35;filter:saturate(.76)}
+body[data-screen=tutorial] .supply-city-labels{display:none}
+body[data-screen=tutorial] #cinema-shade{background:linear-gradient(90deg,#080b13ba,#080b134d 70%),linear-gradient(180deg,#080b1373,transparent 30%,#080b138c 76%,#080b13)}
+.mission-tutorial{display:flex;flex-direction:column;justify-content:center;width:min(928px,100%);min-height:100svh;margin:0 auto;padding:120px 48px 45px}
+.mission-topline{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.mission-topline .section-kicker{font-size:9px;letter-spacing:.2em}
+.mission-page{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10px;letter-spacing:.16em;color:#bdb2cd;white-space:nowrap}
+.mission-progress{display:flex;align-items:center;gap:7px;margin:12px 0 20px}
+.mission-progress i{display:block;flex:1;height:2px;border-radius:5px;background:#ffffff1c;transition:background .3s}
+.mission-progress i.active{background:linear-gradient(90deg,var(--gold),#e6c49a55);box-shadow:0 0 15px #e6c49a29}
+.mission-progress i.complete{background:#b5a5f7a6}
+.mission-card{position:relative;padding:28px 32px 29px;border:1px solid #c3b2d33d;border-radius:11px;background:linear-gradient(120deg,#1b1929ef,#111725ee);box-shadow:0 25px 90px #0005,0 1px 0 #ffffff08 inset;backdrop-filter:blur(15px);overflow:hidden}
+.mission-card:before{content:"";position:absolute;inset:0 0 auto;height:1px;background:linear-gradient(90deg,var(--gold),#b5a5f7a6 42%,transparent 90%)}
+.mission-label{color:var(--violet);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:9px;letter-spacing:.2em;line-height:1.6}
+.mission-card h1{font-family:"Hiragino Mincho ProN","Yu Mincho",YuMincho,serif;font-size:32px;line-height:1.5;font-weight:500;letter-spacing:-.045em;margin-top:10px;color:#f1e9e8}
+.mission-identity{display:flex;align-items:center;gap:12px;max-width:425px;margin-top:16px;padding:8px 12px 8px 9px;border:1px solid #b5a5f725;border-radius:7px;background:#b5a5f708}
+.mission-identity .avatar{flex-basis:37px;width:37px;height:38px;border-radius:9px}
+.mission-identity>div{min-width:0;line-height:1.5}
+.mission-identity b{display:block;font-size:12px;font-weight:600;color:#e4d8ef;letter-spacing:.025em}
+.mission-identity small{display:block;color:#a99bb7;font-size:9px;margin-top:4px;line-height:1.6}
+.mission-copy{position:relative;min-height:68px;margin-top:20px;font-size:18px;line-height:1.95;font-weight:400;letter-spacing:.02em;color:#e2dbe7;white-space:pre-line;overflow-wrap:anywhere}
+.mission-full{display:block;visibility:hidden;pointer-events:none;user-select:none}
+.mission-typed{position:absolute;inset:0;display:block;white-space:inherit}
+.mission-copy.is-typing .mission-typed:after{content:"";display:inline-block;width:2px;height:1.05em;background:var(--gold);margin-left:4px;vertical-align:-.12em;box-shadow:0 0 9px #e6c49a4d}
+.mission-objective{display:flex;flex-direction:column;gap:5px;margin-top:20px;padding:12px 16px;border-left:2px solid var(--gold);background:linear-gradient(90deg,#e6c49a0c,transparent)}
+.mission-objective>span{font-size:9px;letter-spacing:.1em;color:var(--gold);line-height:1.7}
+.mission-objective>b{font-size:14px;line-height:1.75;font-weight:500;color:#e9dece;overflow-wrap:anywhere}
+.mission-actions{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-top:23px}
+.mission-hint{color:#92889e;font-size:9px;line-height:1.8;max-width:280px}
+.mission-actions .primary{flex-shrink:0;min-width:230px;min-height:52px;padding:13px 23px;font-size:12px;letter-spacing:.035em}
+.mission-caption{margin:17px 0 0;color:#9b90a8;font-size:9px;line-height:1.9;text-align:center;letter-spacing:.015em}
+@media(max-width:680px){
+ .mission-tutorial{padding:100px 20px 24px;width:100%;min-height:100svh}
+ .mission-topline{gap:15px}.mission-topline .section-kicker{font-size:8px;letter-spacing:.13em}.mission-topline .section-kicker:before{width:17px;margin-right:9px}.mission-page{font-size:9px;letter-spacing:.1em}
+ .mission-progress{gap:5px;margin:10px 0 17px}.mission-progress i{height:2px}
+ .mission-card{padding:20px 20px 21px;border-radius:9px}.mission-label{font-size:8px;letter-spacing:.15em;line-height:1.5}
+ .mission-card h1{font-size:25px;line-height:1.55;margin-top:8px;letter-spacing:-.05em;overflow-wrap:anywhere}
+ .mission-identity{gap:10px;padding:7px 9px;margin-top:14px;max-width:none;border-radius:6px}.mission-identity .avatar{flex-basis:32px;width:32px;height:33px;border-radius:8px}.mission-identity b{font-size:11px;letter-spacing:0}.mission-identity small{font-size:8px;margin-top:3px;line-height:1.5}
+ .mission-copy{font-size:15px;line-height:1.85;letter-spacing:.01em;margin-top:16px;min-height:83px}.mission-copy.is-typing .mission-typed:after{height:1em;width:2px;margin-left:3px}
+ .mission-objective{margin-top:16px;padding:10px 11px;gap:4px}.mission-objective>span{font-size:8px;letter-spacing:.08em}.mission-objective>b{font-size:12px;line-height:1.75}
+ .mission-actions{flex-direction:column;align-items:stretch;gap:10px;margin-top:18px}.mission-hint{font-size:8px;line-height:1.6;max-width:none;text-align:center}.mission-actions .primary{width:100%;min-width:0;min-height:51px;padding:13px 15px;font-size:12px}
+ .mission-caption{margin-top:14px;font-size:8px;line-height:1.8;padding-inline:3px}body[data-screen=tutorial] #world{opacity:.35;filter:saturate(.7)}body[data-screen=tutorial] #cinema-shade{background:linear-gradient(180deg,#080b1355,#080b1370 30%,#080b1388 72%,#080b13)}
+}
+@media(max-height:740px) and (min-width:681px){.mission-tutorial{padding-top:94px;padding-bottom:25px}.mission-progress{margin-bottom:15px}.mission-card{padding:23px 30px}.mission-card h1{font-size:29px}.mission-identity{margin-top:13px}.mission-copy{margin-top:16px;font-size:17px;line-height:1.85;min-height:62px}.mission-objective{margin-top:17px;padding-block:10px}.mission-actions{margin-top:18px}.mission-caption{margin-top:13px}}
+@media(max-height:740px) and (max-width:680px){.mission-tutorial{padding-top:93px;padding-bottom:20px}.mission-progress{margin-bottom:13px}.mission-card{padding:17px 18px 18px}.mission-card h1{font-size:23px;line-height:1.5}.mission-identity{margin-top:11px}.mission-copy{font-size:14px;line-height:1.8;min-height:76px;margin-top:13px}.mission-objective{margin-top:13px;padding-block:8px}.mission-actions{margin-top:14px;gap:8px}.mission-actions .primary{min-height:47px}.mission-caption{margin-top:11px}}
+@media(max-width:360px){.mission-tutorial{padding-inline:16px}.mission-card{padding-inline:17px}.mission-card h1{font-size:23px}.mission-copy{font-size:14px}.mission-topline .section-kicker{font-size:7px}.mission-identity small{font-size:7px}}
+@media(prefers-reduced-motion:no-preference){.mission-card{animation:dialogue-arrive .36s both}.mission-copy.is-typing .mission-typed:after{animation:mission-cursor .8s steps(1,end) infinite}@keyframes mission-cursor{0%,48%{opacity:1}49%,100%{opacity:0}}}
+@media(prefers-reduced-motion:reduce){.mission-copy.is-typing .mission-typed:after{animation:none!important;opacity:1}}
+
+/* A game title with a clear Japanese promise and a visible real-world basis. */
+body[data-screen=title] .title-screen{padding-top:123px;padding-bottom:60px}
+body[data-screen=title] .film-kicker{color:#c9b9ef;letter-spacing:.23em}
+.film-title.game-title{display:flex;flex-direction:column;align-items:flex-start;gap:18px;max-width:100%;margin:26px 0 23px;font-family:Inter,"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;letter-spacing:0;font-weight:700;line-height:1;text-shadow:none}
+.game-title-en{position:relative;display:block;font-family:Arial,Helvetica,system-ui,sans-serif;font-size:clamp(86px,10.2vw,148px);font-weight:900;line-height:.87;letter-spacing:-.065em;padding-right:.04em;color:#f3edf4;background:linear-gradient(112deg,#f4efef 4%,#e7dff9 55%,#b6a0e3 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 3px 22px #b5a5f724)}
+.game-title-en:after{content:"";position:absolute;left:5px;bottom:-14px;width:114px;height:3px;transform:skewX(-28deg);background:linear-gradient(90deg,var(--gold) 0 51%,transparent 51% 57%,#b5a5f7b3 57% 76%,transparent 76% 82%,#b5a5f740 82%);box-shadow:0 0 18px #b5a5f72b}
+.game-title-ja{display:block;padding-top:10px;font-size:36px;font-weight:700;line-height:1.45;letter-spacing:.015em;color:#f0e7ed;text-shadow:0 4px 35px #0008}
+body[data-screen=title] .film-subtitle{font-size:13px;max-width:500px;line-height:1.95;letter-spacing:.025em}
+body[data-screen=title] .film-meta{margin-top:24px}
+body[data-screen=title] #begin{min-width:270px;margin-top:29px;min-height:56px}
+.film-basis{max-width:540px;margin-top:20px;color:#c4b8cf;font-size:10.5px;line-height:1.9;letter-spacing:.015em}
+.film-basis:before{content:"";display:inline-block;width:14px;height:1px;background:#b5a5f77a;margin-right:9px;vertical-align:middle}
+.title-screen>.film-basis+.fiction-note{margin-top:9px;color:#938b9e;font-size:9px;line-height:1.8}
+@media(max-width:1000px) and (min-width:681px){.game-title-en{font-size:105px}.game-title-ja{font-size:32px}.film-title.game-title{gap:17px}.film-basis{font-size:10px}}
+@media(max-width:680px){
+ body[data-screen=title] .title-screen{padding-top:114px;padding-bottom:43px}
+ body[data-screen=title] .film-kicker{font-size:8px;letter-spacing:.15em}
+ .film-title.game-title{gap:15px;margin:27px 0 21px}
+ .game-title-en{font-size:clamp(77px,19.2vw,108px);line-height:.9;letter-spacing:-.068em;filter:drop-shadow(0 3px 18px #b5a5f72b)}
+ .game-title-en:after{left:3px;bottom:-13px;width:90px;height:2px}
+ .game-title-ja{padding-top:10px;font-size:27px;line-height:1.5;letter-spacing:.005em}
+ body[data-screen=title] .film-subtitle{font-size:12px;line-height:1.95;max-width:360px;letter-spacing:.015em}
+ body[data-screen=title] .film-meta{margin-top:23px;font-size:9px;gap:7px 18px}
+ body[data-screen=title] #begin{min-width:0;min-height:56px;margin-top:27px;font-size:13px}
+ .film-basis{max-width:345px;margin-top:19px;font-size:9px;line-height:1.9;letter-spacing:0}
+ .film-basis:before{width:11px;margin-right:7px}
+ .title-screen>.film-basis+.fiction-note{margin-top:9px;font-size:8px;line-height:1.8}
+}
+@media(max-height:740px) and (min-width:681px){body[data-screen=title] .title-screen{padding-top:105px;padding-bottom:35px}.film-title.game-title{margin-top:19px;margin-bottom:17px;gap:14px}.game-title-en{font-size:108px}.game-title-ja{font-size:31px;line-height:1.4}body[data-screen=title] .film-subtitle{font-size:12px}body[data-screen=title] .film-meta{margin-top:19px}body[data-screen=title] #begin{margin-top:22px;min-height:52px}.film-basis{margin-top:16px;font-size:10px}.title-screen>.film-basis+.fiction-note{margin-top:6px}}
+@media(max-height:740px) and (max-width:680px){body[data-screen=title] .title-screen{padding-top:105px;padding-bottom:32px}.film-title.game-title{margin-top:24px;margin-bottom:18px;gap:14px}.game-title-en{font-size:clamp(76px,18.4vw,102px)}.game-title-ja{font-size:26px;line-height:1.45}body[data-screen=title] .film-subtitle{font-size:11px;line-height:1.9}body[data-screen=title] .film-meta{margin-top:19px}body[data-screen=title] #begin{margin-top:23px;min-height:53px}.film-basis{margin-top:16px;font-size:9px}.title-screen>.film-basis+.fiction-note{margin-top:7px}}
+@media(max-width:360px){.game-title-en{font-size:74px}.game-title-ja{font-size:25px}.film-title.game-title{gap:14px}body[data-screen=title] .film-subtitle{font-size:11px}.film-basis{font-size:8px;max-width:300px}}
+@media(prefers-reduced-motion:no-preference){.title-screen>.film-basis{animation:cinema-reveal .85s .6s both}.title-screen>.film-basis+.fiction-note{animation-delay:.68s}}
+
+/* Readable at normal zoom: the logo is two lines, body copy stays comfortably sized. */
+.story-app{font-size:15px}
+.story-brand{font-size:13px}.story-brand small{font-size:12px;letter-spacing:.1em;line-height:1.5}
+#chapter-label{font-size:12px;letter-spacing:.06em}#story-menu{font-size:14px;min-height:40px;padding:7px 16px}
+.story-app .primary,.story-app .secondary,.story-app .next-button,.story-app .text-button{font-size:14px}
+.section-kicker,.film-kicker{font-size:12px;letter-spacing:.13em}.fiction-note{font-size:12px;line-height:1.85;color:#b2a8bd}
+body[data-screen=title] .film-kicker{font-size:16px;line-height:1.65;letter-spacing:.12em;color:#d6c3fa}
+.film-title.game-title{display:flex!important;flex-direction:column!important;align-items:flex-start;gap:20px;line-height:1;margin-top:25px;margin-bottom:24px}
+.film-title.game-title>.game-title-en,.film-title.game-title>.game-title-ja{display:block!important;flex:0 0 auto;clear:both;max-width:100%}
+.film-title.game-title>.game-title-en{white-space:nowrap;line-height:.97}
+.film-title.game-title>.game-title-ja{padding-top:0;line-height:1.5;margin:0;font-size:36px}
+.game-title-en:after{bottom:-11px}
+body[data-screen=title] .film-subtitle{font-size:16px;line-height:1.9;max-width:600px;color:#ded4e3}
+body[data-screen=title] .film-meta{font-size:13px;line-height:1.8;color:#c1b5cb}
+body[data-screen=title] .film-meta span+span:before{top:6px;height:12px}
+.film-basis{font-size:13px;line-height:1.9;max-width:660px;color:#d0c2de}
+.title-screen>.film-basis+.fiction-note{font-size:12px;line-height:1.85;margin-top:10px;color:#b3a7bf}
+.story-library>p:not(.section-kicker){font-size:15px;line-height:1.9}.story-number{font-size:12px}.story-card-role{font-size:13px}.story-card-desc{font-size:14px;line-height:1.9}.story-card-footer,.story-card-footer small{font-size:12px}.story-card-footer b{font-size:13px;line-height:1.7}
+.scene-chapter{font-size:12px;line-height:1.8;letter-spacing:.08em}.scene-context{font-size:14px;line-height:1.8;max-width:670px;color:#c8bdd1}
+.scene-stamp{font-size:12px;line-height:1.6;letter-spacing:.06em}.scene-stamp>small{font-size:12px;color:#b0a1bc}
+.speaker-info b{font-size:16px}.speaker-info small{font-size:12px;line-height:1.55;color:#bbacc8}.mood-label{font-size:12px;line-height:1.6}
+.dialogue-text{font-size:18px;line-height:1.9;color:#f0e7f1}.dialogue-actions>small{font-size:12px}.story-disclaimer{font-size:12px;line-height:1.7;color:#b2a4bd}
+.story-progress,.story-progress small{font-size:12px;line-height:1.7}
+.story-choice>small{font-size:12px;width:24px;height:24px}.story-choice>span:first-of-type>b,.story-choice>b{font-size:15px;line-height:1.7}.story-choice>span:first-of-type>span,.story-choice>span,.story-choice>p{font-size:14px;line-height:1.8;color:#c7b9d0}.story-choice{padding-right:35px}
+.php-label{font-size:12px;line-height:1.8}.php-flow{font-size:14px;line-height:1.8;gap:11px}.php-arrow{font-size:17px}.php-explainer p{font-size:14px;line-height:1.8;color:#cbbbd9}
+.story-app .supply-city-labels{opacity:.83}.story-app .supply-city-label strong{font-size:12px!important;line-height:1.4!important}.story-app .supply-city-label small{font-size:12px!important;line-height:1.4!important}.story-app .supply-city-number{font-size:11px!important;width:23px!important;height:23px!important}.story-app .supply-city-fallback button{font-size:13px}
+.ending-summary{font-size:16px;line-height:1.95}.chain-stop>span{font-size:12px}.chain-stop>b{font-size:14px}.chain-stop>small{font-size:12px;line-height:1.65}.impact-person b{font-size:15px}.impact-person small{font-size:12px;line-height:1.6;color:#bdafca}.impact-person>.impact-status{font-size:12px;line-height:1.65;padding:4px 8px}.impact-card h3{font-size:18px}.impact-card>p{font-size:14px;line-height:1.9;color:#c6b8d0}.impact-card blockquote{font-size:15px;line-height:1.85}.ending-learning p{font-size:15px;line-height:1.95}.decision-record summary{font-size:14px}.decision-record li,.decision-record li b,.decision-record li p{font-size:14px;line-height:1.9}.ending-fiction{font-size:12px;line-height:1.9;color:#b3a5c0}
+.modal-body{font-size:14px;line-height:1.95}.modal-body h3{font-size:17px}.modal-body .source-card small{font-size:12px}.modal-body table{font-size:14px}.modal-body details summary{font-size:14px}.modal-actions button,.modal-body>.primary{font-size:14px}
+.mission-topline .section-kicker,.mission-page,.mission-label{font-size:12px;line-height:1.75;letter-spacing:.1em}.mission-identity b{font-size:14px}.mission-identity small{font-size:12px;line-height:1.6}.mission-copy{font-size:18px;line-height:1.9}.mission-objective>span{font-size:12px}.mission-objective>b{font-size:15px;line-height:1.8}.mission-hint,.mission-caption{font-size:12px;line-height:1.8;color:#b9a9c8}.mission-actions .primary{font-size:14px}.mission-actions{gap:18px}
+@media(max-width:680px){
+ .story-header{height:86px;align-items:center}.story-brand{font-size:12px;letter-spacing:.12em}.story-brand small{font-size:12px;letter-spacing:.025em;margin-top:4px}.story-header-right{gap:0}#chapter-label{display:none}#story-menu{font-size:14px;min-width:40px;min-height:38px;padding:6px 11px}
+ body[data-screen=title] .title-screen{padding-top:112px;padding-bottom:37px}body[data-screen=title] .film-kicker{font-size:14px;line-height:1.7;letter-spacing:.08em}
+ .film-title.game-title{gap:18px;margin-top:26px;margin-bottom:23px}.film-title.game-title>.game-title-en{line-height:.97;font-size:clamp(73px,18.4vw,103px)}.film-title.game-title>.game-title-ja{font-size:28px;line-height:1.45;padding-top:0}
+ body[data-screen=title] .film-subtitle{font-size:14px;line-height:1.9;max-width:460px}body[data-screen=title] .film-meta{font-size:12px;line-height:1.8;gap:7px 19px;margin-top:22px}body[data-screen=title] #begin{font-size:15px;min-height:57px;margin-top:26px}
+ .film-basis{font-size:12px;line-height:1.85;max-width:450px;margin-top:18px}.title-screen>.film-basis+.fiction-note{font-size:12px;line-height:1.8;margin-top:9px}
+ .story-library{padding-top:113px}.story-library>p:not(.section-kicker){font-size:14px;line-height:1.85}.section-kicker{font-size:12px}.story-number{font-size:12px}.story-card-role{font-size:12px}.story-card-desc{font-size:14px;line-height:1.85}.story-card-footer{gap:12px;flex-wrap:wrap}.story-card-footer small{font-size:12px}.story-card-footer b{font-size:13px}
+ .play-screen{padding-top:101px}.scene-heading h1{font-size:24px;line-height:1.55;max-width:none}.scene-chapter{font-size:12px}.scene-context{font-size:14px;line-height:1.8;max-width:none}.scene-stamp{top:104px;right:21px;font-size:12px;line-height:1.5}.scene-stamp>small{font-size:12px;line-height:1.5;margin-top:2px}.scene-heading{padding-top:0}.scene-heading h1{margin-top:12px}.scene-chapter{display:block;padding-right:100px;min-height:22px}
+ .speaker-info b{font-size:16px}.speaker-info small{font-size:12px;line-height:1.55}.mood-label{font-size:12px;line-height:1.5;max-width:110px;padding:4px 8px}.dialogue-text{font-size:16px;line-height:1.9}.next-button{min-height:46px}.dialogue-actions>small{font-size:12px}.story-disclaimer{font-size:12px;line-height:1.7;margin-top:11px;padding-inline:3px}.story-progress,.story-progress small{font-size:12px}
+ .story-choice{padding:15px 30px 16px 48px}.story-choice>small{font-size:12px;width:24px;height:24px;top:17px;left:12px}.story-choice>span:first-of-type>b,.story-choice>b{font-size:15px;line-height:1.65;margin-bottom:5px}.story-choice>span:first-of-type>span,.story-choice>span,.story-choice>p{font-size:14px;line-height:1.8}.story-choice>span[aria-hidden]{font-size:16px;top:14px}.php-explainer{padding:13px 15px;gap:7px}.php-label{font-size:12px;line-height:1.75}.php-flow{font-size:14px;line-height:1.8;gap:8px}.php-explainer p{font-size:14px;line-height:1.8}.php-arrow{font-size:17px}
+ .story-app .supply-city-label strong{font-size:12px!important}.story-app .supply-city-number{font-size:11px!important;width:22px!important;height:22px!important}.story-app .supply-city-fallback button{font-size:12px}
+ .ending-summary{font-size:14px;line-height:1.9}.impact-chain{gap:22px 15px}.chain-stop>span{font-size:12px}.chain-stop>b{font-size:14px;line-height:1.6}.chain-stop>small{font-size:12px;line-height:1.65}.impact-person b{font-size:15px}.impact-person small{font-size:12px}.impact-person>.impact-status{font-size:12px;padding:4px 7px}.impact-card h3{font-size:18px;line-height:1.7}.impact-card>p{font-size:14px;line-height:1.85}.impact-card blockquote{font-size:15px;line-height:1.85}.ending-learning p{font-size:14px;line-height:1.9}.decision-record summary{font-size:14px;line-height:1.8}.decision-record li,.decision-record li b,.decision-record li p{font-size:14px;line-height:1.85}.ending-fiction{font-size:12px;line-height:1.85}
+ .modal-body{font-size:14px;line-height:1.9}.modal-body h3{font-size:17px}.modal-actions button{font-size:14px}.mission-tutorial{padding-top:109px}.mission-topline .section-kicker,.mission-page,.mission-label{font-size:12px;line-height:1.7;letter-spacing:.05em}.mission-card h1{font-size:27px;line-height:1.5}.mission-identity{padding:10px}.mission-identity b{font-size:14px;line-height:1.6}.mission-identity small{font-size:12px;line-height:1.6}.mission-copy{font-size:16px;line-height:1.9;min-height:91px}.mission-objective>span{font-size:12px}.mission-objective>b{font-size:14px;line-height:1.8}.mission-hint,.mission-caption{font-size:12px;line-height:1.8}.mission-actions .primary{font-size:14px;min-height:53px}.mission-caption{margin-top:17px}
+}
+@media(max-height:740px){body[data-screen=title] .title-screen{padding-top:105px;padding-bottom:30px}.film-title.game-title{margin-top:21px;margin-bottom:20px;gap:18px}body[data-screen=title] .film-meta{margin-top:18px}body[data-screen=title] #begin{margin-top:22px}.film-basis{margin-top:16px}}
+@media(max-width:360px){.story-header{padding-inline:14px}.story-brand{font-size:11px}.story-brand small{font-size:11px;letter-spacing:0}.film-title.game-title>.game-title-en{font-size:69px}.film-title.game-title>.game-title-ja{font-size:26px}body[data-screen=title] .film-kicker{font-size:14px}.mission-topline .section-kicker{font-size:12px}.mission-identity small{font-size:12px}.mission-copy{font-size:16px}.scene-stamp{right:16px}.scene-chapter{padding-right:100px}}

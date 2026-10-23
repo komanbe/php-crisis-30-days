@@ -47,6 +47,7 @@ for (const story of STORIES) {
         assert.ok(frame.scene.impacted.every((nodeId) => PEOPLE.includes(nodeId)));
         assert.ok(frame.speaker === null || PEOPLE.includes(frame.speaker));
         assert.ok(frame.title && frame.text && frame.context && frame.time && frame.chapter);
+        assert.doesNotMatch(`${frame.text} ${frame.context}`, /この物語|架空|演習|想定した|教材上|予測していません/);
         assert.ok(['calm', 'alert', 'relief'].includes(frame.mood));
         if (frame.kind === 'choice') {
           assert.equal(frame.choices.length, 2);
@@ -68,17 +69,21 @@ test('early updating changes the incident, rather than replaying an unavoidable 
     const afterUpdate = frames.slice(4);
     assert.ok(afterUpdate.every((frame) => frame.scene.patched && frame.scene.prevented));
     assert.ok(afterUpdate.every((frame) => frame.scene.impacted.length === 0));
-    assert.match(frames.find((frame) => frame.id === 'crisis-confirmation').text, /侵入は、防げて/);
+    const updateReport = frames.find((frame) => frame.id === 'crisis-update-reaction').text;
+    assert.match(updateReport, /修正は反映/);
+    assert.doesNotMatch(updateReport, /第一報|防げ|安全です/);
+    assert.match(frames.find((frame) => frame.id === 'crisis-confirmation').text, /確認した範囲で、不審な動きは見つかっていません/);
+    assert.match(frames.find((frame) => frame.id === 'crisis-confirmation').text, /通報の真偽はまだ調査中/);
     assert.equal(ending.impacts.find((item) => item.nodeId === 'factory').status, 'protected');
     assert.equal(ending.impacts.find((item) => item.nodeId === 'logistics').status, 'protected');
     assert.equal(ending.impacts.find((item) => item.nodeId === 'vendor').status, 'burden');
   }
   for (const { frames, ending } of delayedPaths) {
-    assert.match(frames.find((frame) => frame.id === 'crisis-confirmation').text, /この物語では、未修正だった PHP/);
+    assert.match(frames.find((frame) => frame.id === 'crisis-confirmation').text, /未修正の PHP から受発注サーバーに侵入されたことが確認/);
     assert.equal(ending.impacts.find((item) => item.nodeId === 'vendor').status, 'affected');
     assert.ok(frames.find((frame) => frame.id === 'crisis-recovery').scene.patched);
     assert.ok(!frames.find((frame) => frame.id === 'crisis-recovery').scene.prevented);
-    assert.match(ending.summary, /取引先へ順番に感染した話ではありません/);
+    assert.match(ending.summary, /広がったのはシステムへの侵入ではなく、前の仕事を待つ時間/);
   }
 });
 
@@ -90,7 +95,7 @@ test('restored systems retain past business harms, and alternatives reduce those
     assert.equal(frames.find((frame) => frame.id === 'crisis-recovery').scene.isolated, false);
     const factory = ending.impacts.find((item) => item.nodeId === 'factory');
     assert.equal(factory.status, state.flags.alternate ? 'burden' : 'affected');
-    assert.match(frames.find((frame) => frame.id === 'crisis-delivery').context, /業務の依存/);
+    assert.match(frames.find((frame) => frame.id === 'crisis-delivery').context, /前の仕事の遅れが、次の予定に届く/);
     assert.match(ending.impacts.find((item) => item.nodeId === 'vendor').text, /復旧後も/);
   }
 });
@@ -98,8 +103,8 @@ test('restored systems retain past business harms, and alternatives reduce those
 test('the future starts patched and models workload rather than forced intrusion', () => {
   for (const { frames, state, ending } of allPaths('updates')) {
     assert.ok(frames.every((frame) => frame.scene.patched && frame.scene.futureMode));
-    assert.match(ending.summary, /架空の 180 日/);
-    assert.match(ending.summary, /予測したものではありません/);
+    assert.match(ending.summary, /更新の通知は届き続け/);
+    assert.match(ending.summary, /作業をいつ進めるか、誰が担うか、いつ知らせるか/);
     assert.ok(!frames.some((frame) => /侵害されました|侵入されました|漏えいしました/.test(frame.text)));
     const vendor = ending.impacts.find((item) => item.nodeId === 'vendor');
     assert.equal(vendor.status, state.flags.scheduled && state.flags.sharedTeam ? 'burden' : 'affected');
