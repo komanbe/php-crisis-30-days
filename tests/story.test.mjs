@@ -169,6 +169,19 @@ test('researcher choices change coordination burdens and retain unverified hando
   }
 });
 
+test('adversary paths distinguish pressure from proven compromise and retain defensive responses', () => {
+  for (const { frames, ending } of allPaths('adversary')) {
+    assert.ok(frames.every((frame) => frame.scene.futureMode && !frame.scene.prevented && !frame.scene.patched));
+    assert.ok(frames.every((frame) => !frame.php));
+    assert.ok(frames.every((frame) => !/PHP|GMO|お名前/.test(`${frame.text} ${frame.context}`)));
+    assert.match(frames.find((frame) => frame.id === 'adversary-claim').context, /侵入・流出の有無、範囲、原因は未確認/);
+    assert.match(frames.find((frame) => frame.id === 'adversary-closing').context, /未確認が残る/);
+    assert.match(ending.lesson, /支払いは、復旧や情報の削除を保証しません/);
+    assert.ok(frames.every((frame) => !/侵入されました|侵害されました|漏えいしました/.test(frame.text)));
+    assert.ok(ending.impacts.every((item) => /確認|記録|窓口|共有|担当/.test(item.text)));
+  }
+});
+
 test('state transitions are immutable and reject skipped, foreign, or forged choices', () => {
   const start = createStory('crisis');
   const saved = structuredClone(start);

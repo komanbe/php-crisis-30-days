@@ -239,3 +239,7 @@ body[data-screen=playing]:has(.player-tag) #scene{--story-scene-top:210px}
 .player-portrait{flex-basis:60px;width:60px;height:66px}
 @media(max-width:680px){.player-tag{font-size:12px;line-height:1.6;padding:4px 10px;margin-bottom:11px;letter-spacing:0}.play-screen:has(.player-tag) .scene-stamp{top:145px}.player-portrait{flex-basis:54px;width:54px;height:60px}body[data-screen=playing]:has(.player-tag) #scene{--story-scene-top:215px}}
 @media(max-height:740px) and (min-width:681px){.play-screen:has(.player-tag) .scene-stamp{top:136px}}
+
+/* Four viewpoints retain readable cards at presentation sizes. */
+@media(min-width:1001px){.character-select .character-cards{grid-template-columns:repeat(2,minmax(0,1fr));max-width:1000px;margin-inline:auto}.character-select .character-card{display:grid;grid-template-columns:170px minmax(0,1fr)}.character-select .character-visual{height:100%;min-height:310px}.character-select .character-portrait{width:210px;height:228px;top:50%;bottom:auto;transform:translate(-50%,-50%)}.character-select .character-copy{padding:24px}.character-select .character-name{font-size:28px}}
+.character-card[data-character=adversary]{--card-accent:#ee9a91}

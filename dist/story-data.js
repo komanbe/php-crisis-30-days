@@ -23,6 +23,11 @@ export const STORIES = Object.freeze([
     subtitle: '「調べてほしい」の、その先へ。', role: 'ホワイトハッカー',
     duration: '約 5 分',
     description: '依頼者の困りごとを聞き、合意した範囲で PHP2Shell を調べる。報告書を渡した、その先まで。現場につながる診断ができるか。'
+  }),
+  Object.freeze({
+    id: 'adversary', number: '04', title: 'その脅しは、誰を動かす？',
+    subtitle: '焦りと情報不足を狙う、もう一つの視点。', role: '攻撃者の視点', duration: '約 5 分',
+    description: '脅す側が狙うのは、画面の向こうにいる人の判断。圧力が誰に届き、守る側はどう受け止めるのかをたどる。'
   })
 ]);
 
@@ -45,6 +50,12 @@ const FLOWS = Object.freeze({
     'researcher-interview-reaction', 'researcher-php', 'researcher-verification', 'researcher-report',
     'researcher-report-reaction', 'researcher-delivery', 'researcher-followthrough', 'researcher-patch',
     'researcher-procurement', 'researcher-customer', 'researcher-closing', 'researcher-ending'
+  ]),
+  adversary: Object.freeze([
+    'adversary-opening', 'adversary-claim', 'adversary-uncertainty', 'adversary-pressure',
+    'adversary-pressure-reaction', 'adversary-work', 'adversary-target', 'adversary-target-reaction',
+    'adversary-delivery', 'adversary-deadline', 'adversary-deadline-reaction', 'adversary-procurement',
+    'adversary-customer', 'adversary-response', 'adversary-closing', 'adversary-ending'
   ])
 });
 
@@ -110,6 +121,24 @@ const DECISIONS = Object.freeze({
     choices: [
       { id: 'accompany', label: '運用担当と、修正確認まで伴走する', description: '合意した時間を取り、運用担当の更新・再起動と受付の確認結果を一緒に確かめる。', value: true, result: '運用担当と、更新・再起動・受付の確認結果まで確かめた。' },
       { id: 'handoff', label: '確認手順を渡し、運用へ引き継ぐ', description: '担当者・確認項目・返答先をそろえて渡す。自分が確認できた範囲も明記する。', value: false, result: '確認手順と返答先をそろえて運用へ引き継ぎ、本番の完了確認は報告待ちとして残した。' }
+    ]
+  },
+  'adversary-pressure': {
+    flag: 'servicePressure', label: '脅しの目的', choices: [
+      { id: 'service', label: 'サービス停止の圧力', description: '仕事を続けられなくなる不安を軸に、相手の反応を見る。', value: true, result: '業務が止まる不安に圧力をかけた。' },
+      { id: 'information', label: '情報公開の圧力', description: '情報が外へ出る不安を軸に、相手の反応を見る。', value: false, result: '情報が公開される不安に圧力をかけた。' }
+    ]
+  },
+  'adversary-target': {
+    flag: 'targetUsers', label: '動かそうとする相手', choices: [
+      { id: 'users', label: '利用者の焦りに目を向ける', description: '利用できるか分からない人たちの反応が、会社へ届く。', value: true, result: '利用者の焦りと、会社に向かう問い合わせに注目した。' },
+      { id: 'company', label: '会社の混乱に目を向ける', description: '判断と連絡が集中する担当者たちの反応が見える。', value: false, result: '会社内の判断待ちと、担当者への集中に注目した。' }
+    ]
+  },
+  'adversary-deadline': {
+    flag: 'shortDeadline', label: '判断にかける圧力', choices: [
+      { id: 'deadline', label: '短い期限で判断を迫る', description: '確かめる時間を奪われた相手が、どう対応するかを見る。', value: true, result: '短い期限によって、確認を急がせる圧力が生まれた。' },
+      { id: 'claims', label: '不確かな主張を重ねる', description: '事実と主張が混ざるなかで、守る側の確認が続く。', value: false, result: '不確かな主張が重なり、照合と説明の負担が増えた。' }
     ]
   }
 });
@@ -221,18 +250,30 @@ function researcherScene(day, flags, selected) {
   };
 }
 
+function adversaryScene(day, flags, selected) {
+  const impacted = day < 1 ? [] : [
+    'vendor', 'hq',
+    ...(flags.servicePressure ? ['factory', 'logistics'] : []),
+    ...(flags.targetUsers ? ['hospital', 'retail'] : [])
+  ];
+  return { day, impacted, patched: false, prevented: false, isolated: false, futureMode: true,
+    pressure: day < 1 ? .1 : .35 + (flags.shortDeadline ? .2 : .1), selected: selected || 'hq' };
+}
+
 function frame(state, values) {
   const flags = state.flags;
   return {
     id: state.nodeId, kind: 'scene',
     eyebrow: state.storyId === 'crisis' ? '受発注会社・社長室'
-      : state.storyId === 'updates' ? '受発注会社・情シスチーム' : 'セキュリティ診断・依頼者との打ち合わせ',
+      : state.storyId === 'updates' ? '受発注会社・情シスチーム'
+        : state.storyId === 'researcher' ? 'セキュリティ診断・依頼者との打ち合わせ' : '脅しと、その向こう側',
     mood: 'calm', nextLabel: 'つづける', context: '',
     ...values,
     scene: state.storyId === 'crisis'
       ? crisisScene(values.day, flags, values.speaker, values.day === 180)
       : state.storyId === 'updates' ? updateScene(values.day, flags, values.speaker)
-        : researcherScene(values.day, flags, values.speaker)
+        : state.storyId === 'researcher' ? researcherScene(values.day, flags, values.speaker)
+          : adversaryScene(values.day, flags, values.speaker)
   };
 }
 
@@ -698,10 +739,114 @@ function researcherFrame(state) {
   }
 }
 
+function adversaryEnding(state) {
+  const { servicePressure, targetUsers, shortDeadline } = state.flags;
+  return {
+    title: '動かそうとしたのは、誰かの判断だった。',
+    summary: '届いた脅しと、確かめられた事実は最後まで別でした。攻撃者の主張だけで侵入や流出が確定するわけではありません。それでも、確認、問い合わせ、予定の調整には人の時間が使われました。',
+    impacts: [
+      impact('vendor', 'burden', '主張を、確認できる情報と分けた', shortDeadline
+        ? '短い期限に急かされながらも、記録の保全と調査を担当。相手の期限をそのまま作業の判断基準にせず、確認済み・未確認を分けて報告した。'
+        : '増える主張を記録と照合し、同じ話を確認し直す負担を引き受けた。主張の数と証拠の量を同一視せず、分からない範囲を残した。', '「言われたこと」と「確かめたこと」は、別の欄に残しました。'),
+      impact('hq', 'burden', targetUsers ? '問い合わせを、判断の窓口につないだ' : '一人に集まる判断を分けた', targetUsers
+        ? '利用者の問い合わせが集まり、受付の時間を使った。確認担当と案内担当を分け、同じ情報を返せる窓口をそろえた。'
+        : '技術の確認、経営判断、現場への連絡が集中した。決める担当と記録する担当を分け、返答の待ち先を明確にした。', targetUsers
+        ? '急いで答えたい。でも、未確認の話を確定とは伝えられません。' : '一人が全部判断する形をやめて、担当と次の報告時刻を決めました。'),
+      impact('factory', servicePressure ? 'burden' : 'protected', servicePressure ? '止まるという言葉に、代替手段を確認した' : '確認済みの製造指示で仕事を続けた', servicePressure
+        ? '停止の脅しを受け、製造指示が届かない場合の連絡先と代替受付を確認した。脅しを聞いただけで設備の侵害と決めつけず、実際の稼働状態を確かめた。'
+        : '公開すると言われた情報と、今日の製造指示を分けて扱った。確認できている業務は続け、変更があれば共有する担当を決めた。', 'うちが今動くかと、相手が何を言ったかを分けて教えてください。'),
+      impact('logistics', servicePressure ? 'burden' : 'protected', servicePressure ? '出発できるかを、自分たちで確かめた' : '噂だけで配送を止めなかった', servicePressure
+        ? '出荷の一覧と荷物の状態を確認し、必要な調整に時間を使った。連絡が途切れた場合の窓口も決め、脅しの言葉だけで出発を判断しなかった。'
+        : '確認できた出荷情報を使い、配送を継続した。情報公開の主張については、担当窓口の更新を待ち、未確認の話を配送先へ広げなかった。', 'トラックと荷物の状態を確認します。変更は、決めた窓口から知らせてください。'),
+      impact('hospital', targetUsers ? 'burden' : 'protected', targetUsers ? '不安を、調達の確認事項に変えた' : '決まった窓口から状況を受け取った', targetUsers
+        ? '調達が続けられるかを問い合わせる手間が増えた。相手の主張ではなく、受付の状態と納品の見通しを窓口に確認し、必要な代案を相談した。'
+        : '社内で整理された確認状況を窓口から受け取り、調達の予定を判断した。更新の時刻が分かり、同じ問い合わせを繰り返す負担を抑えた。', '調達側が知りたいのは、今使える手段と、次の連絡の予定です。'),
+      impact('retail', targetUsers ? 'burden' : 'protected', shortDeadline ? '急がせる言葉と、必要な行動を分けた' : '繰り返される主張を、事実と分けた', targetUsers
+        ? (shortDeadline ? '急ぐように感じる言葉で不安になり、確認の時間を使った。案内元を確かめ、会社の窓口で状況と必要な行動を聞いた。' : '何度も流れる主張を追い、確認に時間を使った。未確認の情報を広げず、会社の窓口で最新の案内を確認した。')
+        : '会社が確認済みの状況と次の案内時刻を示したことで、未確認の情報だけを追い続けずに済んだ。', '焦りました。でも、誰が確かめた話なのか、一度聞くことにしました。')
+    ],
+    chain: PEOPLE.map((nodeId, i) => ({ nodeId,
+      label: ['技術の確認', '会社の判断', '工場', '配送', '病院の調達', '利用者'][i],
+      detail: ['証拠と主張を分ける', targetUsers ? '問い合わせと調査を分担' : '判断と連絡の担当を分担',
+        servicePressure ? '代替の製造指示を確認' : '確認済みの指示で継続', '実際の出荷状態を確認',
+        '使える手段と連絡時刻を確認', shortDeadline ? '期限に急かされても案内元を確認' : '繰り返す主張を未確認のまま扱う'][i] })),
+    lesson: '脅しは、焦りと情報不足のある場所に負担を集めます。記録を残し、確認済みと未確認を分け、判断する人と連絡する人をそろえる。要求への支払いは、復旧や情報の削除を保証しません。',
+    decisions: decisionHistory(state)
+  };
+}
+
+function adversaryFrame(state) {
+  const { servicePressure, targetUsers, shortDeadline } = state.flags;
+  const scenes = {
+    'adversary-opening': { day: 0, time: '夜', title: '相手を動かすのは、技術だけではない。', speaker: null,
+      text: '会社に脅しが届こうとしている。ここで見つめるのは、脅す側が動かそうとする人の判断。画面の向こうには、仕事を続けたい担当者と、状況を知りたい利用者がいる。',
+      context: 'まだ、会社側が確認できている情報は少ない。', nextLabel: '届いた連絡を見る' },
+    'adversary-claim': { day: 0, time: '翌朝', title: '「侵入した」という、一方的な主張。', speaker: 'vendor',
+      text: '外部から、システムに侵入したという連絡が来ています。ただ、相手がそう言っている段階です。届いた内容と記録を残して、実際の状態を確認します。',
+      context: '侵入・流出の有無、範囲、原因は未確認。主張を受け取ったことと、証明されたことを分ける。' },
+    'adversary-uncertainty': { day: 0, time: '09:15', title: '分からない時間に、問い合わせが届く。', speaker: 'hq',
+      text: '受付は今のところ動いています。でも、何を信じていいか分からない、と連絡が来ています。調べる人と、返答する人を分けないと、両方が詰まりそうです。',
+      context: '受注は続いている。確認にかかる時間と、返答を待つ人の時間は同時に進む。' },
+    'adversary-pressure': { day: 0, time: '09:30', title: 'どんな不安を、相手に突きつける？', speaker: null,
+      text: '仕事が止まるかもしれない。情報が外へ出るかもしれない。どちらの言葉も、担当者の判断を急がせる。圧力の先で、誰が何を確認するのか。',
+      context: '要求の言葉だけでは、相手の実際の能力や被害の有無は分からない。' },
+    'adversary-pressure-reaction': { day: 1, time: '10:00', title: servicePressure ? '「止まるかも」に、現場が反応する。' : '「公開する」に、確認が集まる。', speaker: 'vendor',
+      text: servicePressure ? '停止の可能性を示す連絡が来ました。まず実際の稼働を見ます。必要な記録を残して、止まった場合の受付方法も確認しましょう。'
+        : '情報を公開するという連絡です。何を持っているのか、まだ確認できていません。流出したと断定せず、調査できた範囲をまとめます。',
+      context: '相手の主張は記録した。確認できた事実は、別に整理している。' },
+    'adversary-work': { day: 1, time: '11:20', title: '工場が知りたいのは、今日の指示。', speaker: 'factory',
+      text: servicePressure ? 'あ、やばい、受付が止まるかもしれないんですか？ 今の注文は確認できています。次が届かないとき、どこに連絡するか決めておきたいです。'
+        : '公開すると言われた件は、担当の確認を待ちます。今日の製造指示は届いていますから、変更の連絡があれば分かるようにしてください。',
+      context: '工場の設備が侵害されたと確認されたわけではない。業務を続けるための確認が増えている。' },
+    'adversary-target': { day: 1, time: '13:00', title: '焦りは、どこに集まっている？', speaker: null,
+      text: '返答を待つ利用者。問い合わせを受ける会社。限られた情報のなかで、誰もが次の判断を探している。脅す側は、その焦りを圧力に変えようとする。',
+      context: '利用者と会社のどちらに目を向けても、その先には確認と連絡を担う人がいる。' },
+    'adversary-target-reaction': { day: 2, time: '09:00', title: targetUsers ? '利用者の声が、受付に重なる。' : '会社の判断が、一人に集まる。', speaker: 'hq',
+      text: targetUsers ? '「今日使えるのか」と問い合わせが増えています。まだ分からないこともあります。案内を一本にして、次に知らせる時間も出しましょう。'
+        : '技術の確認も、現場への連絡も、全部ミオさん待ちになっています。確認する担当と判断する担当を分けて、報告の時刻をそろえます。',
+      context: '問い合わせへの返答と調査を分担する。確認前の情報を、急いで結論にしない。' },
+    'adversary-delivery': { day: 2, time: '11:00', title: '脅しの言葉では、荷物は動かない。', speaker: 'logistics',
+      text: servicePressure ? '出荷の一覧と荷物を確認します。今出せる便と、確認が必要な便を分けたいです。連絡先が決まっていれば、何度も探さずに済みます。'
+        : '配送の準備はできています。未確認の話で予定を変える前に、決めた窓口に聞きます。出荷に変更があるなら、そこから知らせてください。',
+      context: '配送の判断は、確認できた荷物と出荷情報に基づいて進める。' },
+    'adversary-deadline': { day: 2, time: '14:00', title: '相手から、確かめる余裕を奪う圧力。', speaker: null,
+      text: '短い期限を示すか、不確かな主張を重ねるか。どちらも、十分に確かめる前に相手を動かそうとする圧力になる。守る側には、何が起こるだろう。',
+      context: '脅しに返事をすることと、被害を回復できることは同じではない。' },
+    'adversary-deadline-reaction': { day: 3, time: '09:20', title: shortDeadline ? '期限より先に、確認すべきことがある。' : '主張が増えても、証拠が増えたとは限らない。', speaker: 'vendor',
+      text: shortDeadline ? '短い期限を示されています。でも、相手の期限だけで判断はできません。確認済みの状況と不明点をそろえて、責任者に報告します。'
+        : '新しい主張が届くたびに確認しています。同じ話も混ざっていますね。追加で確かめられたことだけを、記録して共有します。',
+      context: '要求内容と確認結果を記録し、判断する責任者へ渡す。支払いで復旧や削除が保証されるわけではない。' },
+    'adversary-procurement': { day: 3, time: '13:40', title: '調達窓口にも、判断の材料がいる。', speaker: 'hospital',
+      text: targetUsers ? '不安な話を聞いて、調達が続けられるか確認しています。受付の状態と納品の見通し、それから次の連絡の時刻を教えてください。'
+        : '窓口から確認状況を聞けました。分からない部分も分かったので、必要な調達の代案を考えます。変更があれば、同じ窓口から知らせてください。',
+      context: '病院の調達担当は、脅しの内容より、いま選べる発注方法を確認している。' },
+    'adversary-customer': { day: 3, time: '18:00', title: '「早くして」の向こうにいる人。', speaker: 'retail',
+      text: targetUsers ? (shortDeadline ? '急がないといけないように見えて、焦りました。でも、どこからの案内か確かめたいです。会社の窓口では、何が分かっていますか？'
+        : '同じような話が何度も出てきて、全部本当みたいに感じました。いま確かめられたことは何か、案内を確認します。')
+        : '会社の案内に、分かっていることと次の連絡時刻がありました。未確認の話を追うより、そこを確認することにします。',
+      context: '利用者が確かめられる案内先をそろえることも、対応の一部になっている。' },
+    'adversary-response': { day: 5, time: '10:00', title: '焦りを、一人に背負わせない。', speaker: 'hq',
+      text: '確認する人、判断する人、知らせる人を分けました。全てが分かったわけではありませんが、誰が次に何をするかは決まっています。記録を残して、状況が変わったら案内を更新します。',
+      context: '受付・調査・連絡の役割がそろい、同じ問い合わせを繰り返す負担を減らしている。' },
+    'adversary-closing': { day: 7, time: '一週間後', title: '狙われたのは、人が決める瞬間だった。', speaker: null,
+      text: '相手を焦らせる言葉は、確認と連絡の時間を奪った。それでも、主張を事実と分ける人、業務の状態を確かめる人、利用者へ知らせる人がいた。圧力の先にいた人たちを振り返る。',
+      context: '侵入や流出の有無、範囲、原因には未確認が残る。脅しの強さだけで結論は出さない。', nextLabel: '狙いと、守る側の手立てを見る' },
+    'adversary-ending': { kind: 'ending', day: 7, time: '振り返り', title: '脅しが届いた 6 人。その後の判断。', speaker: null,
+      text: '攻撃者の主張を受けて、6 人が確認と調整を引き受けた。成功の点数ではなく、狙われた焦りと、それに向き合った手立てをたどる。',
+      context: '届いた主張、確認できた事実、残った不明点。その区別を最後まで残す。', ending: adversaryEnding(state) }
+  };
+  const values = scenes[state.nodeId];
+  const choice = Object.hasOwn(DECISIONS, state.nodeId);
+  const choiceNumber = ['adversary-pressure', 'adversary-target', 'adversary-deadline'].indexOf(state.nodeId) + 1;
+  const enriched = { chapter: choice ? `DECISION ${choiceNumber} / 3` : values.kind === 'ending' ? 'YOUR ENDING' : 'CHAPTER ' + String(Math.min(4, Math.floor(FLOWS.adversary.indexOf(state.nodeId) / 4) + 1)).padStart(2, '0'), ...values };
+  return choice ? choiceFrame(state, enriched) : frame(state, enriched);
+}
+
 export function getFrame(state) {
   validateState(state);
   return state.storyId === 'crisis' ? crisisFrame(state)
-    : state.storyId === 'updates' ? updatesFrame(state) : researcherFrame(state);
+    : state.storyId === 'updates' ? updatesFrame(state)
+      : state.storyId === 'researcher' ? researcherFrame(state) : adversaryFrame(state);
 }
 
 /** Return a new state; conversations require no action, decisions require an ID. */

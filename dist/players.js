@@ -1,5 +1,17 @@
 /** Playable roles. These people and their missions belong to the fictional story. */
 export const PLAYERS = Object.freeze({
+  adversary: Object.freeze({
+    id: 'adversary', role: '攻撃者の視点', english: 'ADVERSARY', color: '#ee9a91',
+    identity: '架空の攻撃者 / 心理と影響を読み解く',
+    tagline: 'GMOの公表資料から着想。脅しの先で、誰が困る？',
+    roleTitle: '攻撃者の視点に、立つ。',
+    roleText: 'あなたは、架空の攻撃者の視点から状況を読み解きます。\n狙われるのはシステムだけでなく、会社や利用者の焦りと判断です。',
+    roleObjective: '攻撃者の狙いと、人に届く影響を見抜く。',
+    missionTitle: 'その脅しは、誰を動かす？',
+    missionText: 'GMOの不正アクセス事案の公表資料を参考にした創作です。\n実際の侵入経路を再現せず、脅し、情報の混乱、利用者への影響を追います。PHPが原因という設定ではありません。',
+    missionObjective: '3つの選択から、守る側が断ち切れる連鎖を考える。',
+    firstAction: '攻撃者の視点で始める'
+  }),
   crisis: Object.freeze({
     id: 'president',
     role: '社長',
@@ -48,8 +60,9 @@ export const PLAYERS = Object.freeze({
 });
 
 // Every illustration is self-contained. Role-specific IDs keep their gradients
-// distinct when all three portraits appear together in character selection.
+// distinct when all four portraits appear together in character selection.
 const PORTRAITS = Object.freeze({
+  adversary: `<svg viewBox="0 0 240 260" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="120" cy="123" r="95" fill="#ee9a9112" stroke="#ee9a9155"/><path d="M45 260v-55q0-45 75-45t75 45v55" fill="#333346" stroke="#ee9a9177" stroke-width="2"/><path d="M76 106V83q0-47 44-47t44 47v40l-20 33H96Z" fill="#202432"/><ellipse cx="120" cy="103" rx="36" ry="43" fill="#ba9693"/><path d="M83 98q-6-56 38-57 44 1 36 57l-18-22-22 8-22-3Z" fill="#252938"/><g fill="none" stroke="#282a39" stroke-width="4"><rect x="90" y="97" width="24" height="18" rx="5"/><rect x="126" y="97" width="24" height="18" rx="5"/><path d="M114 104h12"/></g><path d="M109 130h22" stroke="#755a60" stroke-width="3" stroke-linecap="round"/><path d="M99 162l21 28 21-28" fill="none" stroke="#ee9a91" stroke-width="3"/><rect x="60" y="204" width="120" height="53" rx="6" fill="#161b29" stroke="#697487" stroke-width="2"/><path d="M104 229h32m-27 9h22" stroke="#ee9a91" stroke-width="3"/><circle cx="120" cy="217" r="3" fill="#ee9a91"/></svg>`,
   crisis: `<svg viewBox="0 0 240 260" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
     <defs>
       <radialGradient id="president-halo"><stop stop-color="#e6c49a" stop-opacity=".19"/><stop offset="1" stop-color="#e6c49a" stop-opacity="0"/></radialGradient>
