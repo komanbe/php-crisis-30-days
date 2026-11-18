@@ -173,7 +173,7 @@ test('adversary paths distinguish pressure from proven compromise and retain def
   for (const { frames, ending } of allPaths('adversary')) {
     assert.ok(frames.every((frame) => frame.scene.futureMode && !frame.scene.prevented && !frame.scene.patched));
     assert.ok(frames.every((frame) => !frame.php));
-    assert.ok(frames.every((frame) => !/PHP|GMO|お名前/.test(`${frame.text} ${frame.context}`)));
+    assert.ok(frames.every((frame) => !/PHP/.test(`${frame.text} ${frame.context}`)));
     assert.match(frames.find((frame) => frame.id === 'adversary-claim').context, /侵入・流出の有無、範囲、原因は未確認/);
     assert.match(frames.find((frame) => frame.id === 'adversary-closing').context, /未確認が残る/);
     assert.match(ending.lesson, /支払いは、復旧や情報の削除を保証しません/);

@@ -3,12 +3,12 @@ export const PLAYERS = Object.freeze({
   adversary: Object.freeze({
     id: 'adversary', role: '攻撃者の視点', english: 'ADVERSARY', color: '#ee9a91',
     identity: '架空の攻撃者 / 心理と影響を読み解く',
-    tagline: 'GMOの公表資料から着想。脅しの先で、誰が困る？',
+    tagline: '実際の事案から着想。脅しの先で、誰が困る？',
     roleTitle: '攻撃者の視点に、立つ。',
     roleText: 'あなたは、架空の攻撃者の視点から状況を読み解きます。\n狙われるのはシステムだけでなく、会社や利用者の焦りと判断です。',
     roleObjective: '攻撃者の狙いと、人に届く影響を見抜く。',
     missionTitle: 'その脅しは、誰を動かす？',
-    missionText: 'GMOの不正アクセス事案の公表資料を参考にした創作です。\n実際の侵入経路を再現せず、脅し、情報の混乱、利用者への影響を追います。PHPが原因という設定ではありません。',
+    missionText: 'クラウドサービスの不正アクセス事案を参考にした創作です。\n実際の侵入経路を再現せず、脅し、情報の混乱、利用者への影響を追います。PHPが原因という設定ではありません。',
     missionObjective: '3つの選択から、守る側が断ち切れる連鎖を考える。',
     firstAction: '攻撃者の視点で始める'
   }),
